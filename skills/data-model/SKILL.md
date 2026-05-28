@@ -18,7 +18,7 @@ description: >
 
 End-to-end runner for the persistence cut: data model + migrations + drift check in one pass. Greenfield-first by default; brownfield delta as `--mode brownfield`. Output is **shippable** — full `.up.sql` + `.down.sql` ready to run, not a plan.
 
-The DB-as-dumb-storage defaults below are the opinionated set; they are written into a baseline rules file on first run so the team can edit them. The size matrix (→ [`../_shared/size-matrix.md`](../_shared/size-matrix.md)) governs how much you produce; the aggregate-roots dialogue uses [`../_shared/ask-style.md`](../_shared/ask-style.md).
+The DB-as-dumb-storage defaults below are a **starting opinion, not law.** On first run they're written to `.claude/rules/migrations.md`; from then on the skill **follows whatever that file says** and detects/respects an existing one. A team that wants `updated_at`, soft-deletes, or `CHECK` constraints just edits the rules file — the skill adapts (the proving run did exactly this: it followed a repo that opts into `CHECK` + `updated_at`). The size matrix (→ [`../_shared/size-matrix.md`](../_shared/size-matrix.md)) governs how much you produce; the aggregate-roots dialogue uses [`../_shared/ask-style.md`](../_shared/ask-style.md).
 
 ## Owner
 
@@ -45,7 +45,7 @@ Backend Lead.
 | Breaking change / new NOT NULL on existing table | Auto-decompose: expand → backfill → contract (3 migrations) | Zero-downtime by default. |
 | String columns | bounded `VARCHAR(N)`; unbounded text only for URLs / long descriptions | Schema as documentation. |
 | Opaque payload | the JSON column type **only** for semantically opaque data | Structured fields → first-class columns. |
-| Forbidden | `CHECK`, `TRIGGER`, business-literal `DEFAULT`, sequence-as-PK, multi-DB / partitioning / materialized views | DB stays dumb; business logic in code. |
+| Off by default (opt in via the rules file) | `CHECK`, `TRIGGER`, business-literal `DEFAULT`, sequence-as-PK, multi-DB / partitioning / materialized views | Keeps the DB dumb + business logic in code by default — enable any of these in `.claude/rules/migrations.md` if your team prefers them. |
 
 ## Protocol
 

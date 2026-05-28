@@ -17,7 +17,16 @@ description: >
 
 # Skill: api
 
-Projects the upstream artifacts into one HTTP contract. For each acceptance criterion it reads `data-model.md` for the typed shape, the sad.md §6 sequences for the error branches and async actors, and emits `docs/features/<slug>/contracts/openapi.yaml` (OpenAPI 3.1) + an `api-sync-report.md` that proves the contract still matches its sources. If the feature has async flows, it also scaffolds `contracts/events.md`. The contract is **derived, never typed by hand** — generation that diverges from the model or the sequences is the bug this skill exists to catch.
+Projects the upstream artifacts into one **interface contract**. By default that's an HTTP/OpenAPI contract; this skill is **interface-kind aware** — for a non-HTTP project it produces the matching contract form (or steps aside):
+
+- **HTTP / REST** (default) → `contracts/openapi.yaml` (OpenAPI 3.1) + `api-sync-report.md`.
+- **gRPC / RPC** → a `.proto` (or the repo's IDL) with the same derive-and-drift discipline.
+- **CLI** → `contracts/cli.md` — the command/flag/exit-code surface derived from the AC.
+- **Library / SDK** → `contracts/public-api.md` — the public signatures/types the feature exposes.
+- **Event-only / worker** → just `contracts/events.md` (no request/response surface).
+- **No external interface** (pure internal logic) → **skip** with a one-line note in the report; go straight to `tasks`.
+
+Whatever the form, the contract is **derived from `data-model.md` + the sad.md §6 sequences + the spec's AC, never typed by hand** — generation that diverges from the model or the sequences is the bug this skill exists to catch. The rest of this file details the HTTP path (the common case); the same derive → drift-check → reconcile loop applies to the other forms with the form-appropriate artifact.
 
 This skill keeps only its own machinery. Question phrasing is **shared** → [`../_shared/ask-style.md`](../_shared/ask-style.md). Depth (events doc only when async; one resource vs full surface) follows the **size matrix** → [`../_shared/size-matrix.md`](../_shared/size-matrix.md). The drift-resolution dialog reuses the shared 4-state actions — keep it short, point the machinery to `_shared`.
 
@@ -35,7 +44,7 @@ Backend Lead (drives the interface). The PM confirms each endpoint maps to a rea
 
 ## Protocol
 
-1. **Gate + read.** `test -f docs/features/<slug>/data-model.md` → fail = refuse with the pointer above. Read it (entities, fields, types, constraints), `sad.md` §6 (flows + `alt`-branches + async actors), `spec.md` §4/§5. Surface a one-line "found / missing" note for sad.md and spec.md — never refuse on their absence, only narrow the derivation and record the gap in the report.
+1. **Gate + interface kind + read.** `test -f docs/features/<slug>/data-model.md` → fail = refuse with the pointer above. **Determine the interface kind** from `docs/architecture-map.md` + the spec's capabilities: HTTP/REST → the OpenAPI path below (the default, detailed here); gRPC/CLI/library/event-only → produce the matching contract form (see the intro) with this same derive→drift→reconcile loop; **no external interface** (pure internal logic) → skip to `tasks` with a one-line note in the report. Then read `data-model.md` (entities, fields, types, constraints), `sad.md` §6 (flows + `alt`-branches + async actors), `spec.md` §4/§5. Surface a one-line "found / missing" note for sad.md and spec.md — never refuse on their absence, only narrow the derivation and record the gap.
 2. **Copy the template.** [`./templates/openapi.yaml`](./templates/openapi.yaml) → `docs/features/<slug>/contracts/openapi.yaml`. If async flows exist, also [`./templates/events.md`](./templates/events.md) → `contracts/events.md`. Fill `info.description` from `spec.md` §1 (why this API exists).
 3. **Derive endpoints + schemas.** One endpoint (or more) per §4 user story. Every request/response field traces to a `data-model.md` entity column — copy its constraints across (`maxLength`/`pattern`/`enum` from the model's bounded types). **Never invent a field with no origin in any input** — ask the user where it comes from. `$ref` every shared schema; no inline duplication. Lists paginate by cursor (`?after=&before=&limit=`), wrapped in `{items, has_next, has_prev, next_cursor}`.
 4. **Derive error responses from the sequences.** Each endpoint covered by a §6 flow: turn every `alt … else … end` branch into a `responses` entry. The error body is the unified envelope **`{code, message, details?}`**; `code` follows the **neutral** convention `module.error_name` (snake_case, e.g. `lesson.not_owned`, `lesson.invalid_state`) — a naming rule, not a language artifact. Map status by class (4xx client / 5xx server). This closes the spec's usual blind spot — §5 lists the happy path + a couple of errors; the sequences enumerate the authorization and concurrent-state branches the spec omits.

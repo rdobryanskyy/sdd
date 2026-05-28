@@ -26,8 +26,8 @@ Pick these together. In *guided-default* mode, present the whole set as one reco
 | Decision | What to pick | Default heuristic |
 |---|---|---|
 | **Stack** | language + framework + datastore | match the intent (HTTP API → a mainstream web framework + a relational DB; CLI → the language's standard CLI lib, no DB) |
-| **Architectural style** | how code is organized | hexagonal modules (`domain → app → infra → ports`) with self-wiring — the pattern the rest of SDD assumes |
-| **Folder / module structure** | the top-level layout | `cmd|src/`, `internal/modules/<m>/{domain,app,infra,ports}`, `migrations/`, `docs/` — adapt names to the stack |
+| **Architectural style** | how code is organized | a sensible default for the stack (modular service → hexagonal `domain → app → infra → ports`; CLI/library → the ecosystem's idiomatic layout). SDD works with any style — pick what fits, don't force hexagonal |
+| **Folder / module structure** | the top-level layout | the stack's conventional layout (a modular service might use `cmd|src/` + `modules/<m>/...` + `migrations/` + `docs/`; a CLI/library follows its ecosystem) — adapt freely |
 | **Data / persistence** | migration tool + ID strategy | the stack's standard migration tool; app-generated time-sortable IDs; «DB as dumb storage» (see `data-model`'s baseline) |
 | **Conventions** | errors, tests, CI | a unified error envelope; unit + integration (ephemeral real dependency) test layout; one CI workflow running build+test+lint |
 

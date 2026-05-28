@@ -1,0 +1,26 @@
+{
+  "name": "sdd",
+  "owner": {
+    "name": "Kyrylo Genkov",
+    "email": "genkovi4@gmail.com",
+    "url": "https://github.com/genkovich"
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": "./",
+      "version": "1.0.0",
+      "description": "Spec-Driven Development pipeline: 12 atomic Socratic skills (size → spec → design → data-model → api → tasks → tests) plus a TDD implementation engine with agent-team and dynamic-workflow modes.",
+      "category": "workflow",
+      "tags": [
+        "sdd",
+        "spec-driven-development",
+        "prd",
+        "adr",
+        "architecture",
+        "openapi",
+        "tdd"
+      ]
+    }
+  ]
+}

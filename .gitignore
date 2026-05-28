@@ -1,0 +1,11 @@
+# Plugin-local settings (per-project, lazy-created by the implement skill)
+.claude/*.local.md
+
+# Implementation engine worktrees
+.worktrees/
+
+# OS / editor cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/

@@ -1,0 +1,26 @@
+{
+  "name": "sdd",
+  "version": "1.0.0",
+  "description": "Spec-Driven Development pipeline for Claude Code: 12 atomic skills that carry a feature from sizing → spec → design → data model → API → tasks → tests → implementation, plus a TDD implementation engine with agent-team and dynamic-workflow modes. Skills are stack-agnostic and Socratic: classify-size (XS/S/M/L/XL gate), specify (lightweight interview + PRD/spec in one pass, Socratic per-AC + clean-context critic), clarify (devil's-advocate ambiguity sweep before planning), design (Arc42 SAD + C4 L1/L2 + inline ADRs with a blast-radius gate), sequences (Mermaid sequence diagrams with generic participants), data-model (data-model.md + paired forward/rollback migrations + drift check), api (OpenAPI 3.1 derived from data-model + sequences + spec with drift reconcile), tasks (3-stage breakdown emitting a tracker + tasks.json DAG contract), decide-adr (post-hoc ADRs), plan-tests (AC-to-test mapping), glossary (lazy CONTEXT.md), implement (TDD red→green→refactor engine that reads tasks.json, builds a dependency DAG, and runs sequential, agent-team, or dynamic-workflow modes behind feature flags). Shared Socratic / critic / size-matrix / ask-style logic lives once in skills/_shared and is referenced, not duplicated. Three subagents ship with the engine: sdd-test-author (writes failing tests), sdd-implementer (makes them pass), sdd-reviewer (read-only spec/AC + quality review). GATE skills hard-refuse when a prerequisite artifact is missing. Each SKILL.md is the source of truth; heavy detail lives in references/, output templates in templates/.",
+  "author": {
+    "name": "Kyrylo Genkov",
+    "email": "genkovi4@gmail.com",
+    "url": "https://github.com/genkovich"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/genkovich/sdd",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/genkovich/sdd.git"
+  },
+  "keywords": [
+    "sdd",
+    "spec-driven-development",
+    "claude-code",
+    "prd",
+    "adr",
+    "architecture",
+    "openapi",
+    "tdd"
+  ]
+}

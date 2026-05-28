@@ -1,0 +1,26 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate plugin (name / version / description + skill & agent frontmatter)
+        run: python3 scripts/validate_plugin.py
+
+      - name: No references to excluded legacy dirs
+        run: |
+          if grep -REn '00-overview|document-templates|examples/|scripts/sdlc_lint|generate-gates' skills agents README.md 2>/dev/null; then
+            echo "FAIL: found a reference to an excluded legacy dir/file"; exit 1
+          fi
+          echo "OK: no excluded-dir references"

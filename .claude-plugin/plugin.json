@@ -1,6 +1,6 @@
 {
   "name": "sdd",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Spec-Driven Development for Claude Code: 15 atomic, stack-agnostic skills that carry a feature from idea → spec → design → data-model → API → tasks → tests → implement → review → ship, plus a TDD implementation engine and 6 subagents. Start with `survey` (it maps an existing codebase or bootstraps an empty one), then walk the gated backbone — each stage reads the previous artifact and hard-refuses if it's missing; heavy detail lives in each skill's references/, shared logic once in skills/_shared/.",
   "author": {
     "name": "Kyrylo Genkov",
@@ -9,10 +9,7 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/genkovich/sdd",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/genkovich/sdd.git"
-  },
+  "repository": "https://github.com/genkovich/sdd.git",
   "keywords": [
     "sdd",
     "spec-driven-development",

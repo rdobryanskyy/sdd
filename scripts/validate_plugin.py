@@ -82,7 +82,19 @@ def main() -> int:
     check(bool(SEMVER.match(version)), f"plugin version {version!r} is semver", f"plugin version {version!r} is not semver X.Y.Z")
     check(len(desc) >= 50, f"plugin description present ({len(desc)} chars)", f"plugin description too short ({len(desc)} chars)")
     check(bool(plugin.get("license")), "plugin declares a license", "plugin.json has no license")
-    check(bool((plugin.get("author") or {}).get("name")), "plugin declares an author", "plugin.json has no author.name")
+    auth = plugin.get("author")
+    auth_name = auth if isinstance(auth, str) else (auth.get("name") if isinstance(auth, dict) else None)
+    check(bool(auth_name), "plugin declares an author", "plugin.json has no author")
+
+    # --- manifest schema FIELD TYPES (Claude Code's loader rejects wrong types) ---
+    repo = plugin.get("repository")
+    check(repo is None or isinstance(repo, str),
+          "plugin repository is a string (or absent)",
+          "plugin.json `repository` must be a STRING URL, not an object {type,url} — Claude Code's manifest schema rejects the object form")
+    check(plugin.get("homepage") is None or isinstance(plugin.get("homepage"), str),
+          "plugin homepage is a string (or absent)", "plugin.json `homepage` must be a string")
+    check(auth is None or isinstance(auth, (str, dict)),
+          "plugin author is a string or object (or absent)", "plugin.json `author` must be a string or object")
 
     # --- marketplace.json: agrees with plugin.json on name / version / description ---
     print("== marketplace ==")

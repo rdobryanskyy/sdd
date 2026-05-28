@@ -21,6 +21,7 @@ The engine does **not** paste these into prompts — each agent (or the sequenti
 - `docs/features/<slug>/data-model.md` + the migration files — schema the code targets.
 - `docs/features/<slug>/contracts/openapi.yaml` — the API contract handlers must match.
 - `docs/features/<slug>/sad.md` + Accepted `adr/` — the architecture and the locked decisions.
+- `docs/architecture-map.md` (from `survey`, if present) — the existing system's conventions the new code must match (module wiring, error handling, IDs, tests, migrations) + the closest precedent to copy. Saves the agents re-discovering the patterns.
 
 ## Repo state
 

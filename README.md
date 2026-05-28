@@ -1,7 +1,7 @@
 # SDD — Spec-Driven Development for Claude Code
 
 A self-contained Claude Code plugin that carries a feature from a one-line idea to
-**reviewed, verified, shipped** code through **14 atomic, stack-agnostic skills** and a
+**reviewed, verified, shipped** code through **15 atomic, stack-agnostic skills** and a
 **TDD implementation engine**.
 
 Every skill is Socratic (it walks decisions with you, it doesn't dump a wall of output),
@@ -17,11 +17,17 @@ gated (a stage hard-refuses when its prerequisite artifact is missing), and stac
 
 ## Start here
 
-**Run `specify` first.** You don't bring a spec — `specify` *creates* it: a short interview
-asks you about the idea (the problem, who it's for, what "done" looks like) and writes
-`spec.md` from your answers. That spec is the seed everything downstream reads.
+**On an existing codebase, run `survey` once first.** It scans the repo and writes
+`docs/architecture-map.md` — the current architecture (module layout, conventions, datastores,
+a C4 of what exists). Every later stage reads that map instead of re-discovering your codebase,
+and `specify` writes the spec already aware of what's there. Refresh it when the repo drifts.
+
+**Then run `specify`.** You don't bring a spec — `specify` *creates* it: a short interview asks
+about the idea (the problem, who it's for, what "done" looks like) and writes `spec.md`. That
+spec is the seed everything downstream reads.
 
 ```text
+/sdd-survey                         ← once per repo: maps the current architecture
 /sdd-specify checkout-discounts     ← interviews you, writes the spec
 ```
 
@@ -36,6 +42,7 @@ after the code is written.
 
 ```mermaid
 flowchart LR
+    SV[survey<br/>once per repo] --> S
     subgraph backbone["BACKBONE — run in order"]
         S[specify] --> CL[clarify] --> D[design] --> SQ[sequences] --> DM[data-model] --> API[api] --> T[tasks] --> PT[plan-tests] --> IM[implement]
     end
@@ -48,11 +55,17 @@ flowchart LR
     SH --> done([shipped: PR + changelog])
 ```
 
+### Step 0 — survey (once per repo, before the backbone)
+
+| # | Skill | What it does | Reads → Produces |
+|---|---|---|---|
+| 0 | **survey** | Scans the existing codebase once and persists the current architecture, so later stages don't re-discover it. Refresh when the repo drifts. | the repo → `docs/architecture-map.md` |
+
 ### Backbone — the straight line (run in order)
 
 | # | Skill | What it does | Reads → Produces |
 |---|---|---|---|
-| 1 | **specify** | Interviews you to capture the idea, writes the product spec + acceptance criteria | *your idea* → `spec.md` |
+| 1 | **specify** | Interviews you to capture the idea, writes the product spec + acceptance criteria (reads the architecture map for constraints) | *your idea*, `architecture-map.md` → `spec.md` |
 | 2 | **clarify** | Sweeps the spec for ambiguities (a devil's-advocate pass), closes or defers each | `spec.md` → tightened `spec.md` |
 | 3 | **design** | **Matches the feature to your existing architecture** (see below), writes the Arc42 SAD + C4 + ADRs | `spec.md`, `CONTEXT.md` → `sad.md`, `adr/*` |
 | 4 | **sequences** | Draws the runtime flows as Mermaid sequence diagrams | `sad.md` → `sad.md §6` |
@@ -92,13 +105,24 @@ questions about the problem, the users, and what success looks like, then drafts
 validates each acceptance criterion with you, and runs a clean-context critic before writing
 `spec.md`. The idea is the input; the spec is the output.
 
-## Where architecture matching happens
+## Where we study the codebase / hold the current architecture
 
-In **`design`**. Before it writes a line of the architecture document, `design` runs a
-**brownfield Explore subagent** that scans your existing codebase — module boundaries, the
-patterns you already use, where similar features live — and matches the new feature to that
-reality. So the SAD describes *your* system extended, not a greenfield design in a vacuum.
-Decisions that are expensive to reverse cross a blast-radius gate and become ADRs.
+The existing system is studied **once, in `survey`** (Step 0), which persists
+`docs/architecture-map.md` — the current architecture: module layout, layering, datastores,
+conventions, and a C4 of what exists. That map is the single source of "what's already here":
+
+- **`specify`** reads it so the spec's constraints / non-goals reflect the real system (without
+  leaking tech into the acceptance criteria).
+- **`design`** reads it and **matches** the feature to that reality — the SAD describes *your*
+  system extended, not a greenfield design in a vacuum. It re-scans (via `sdd-explorer`) only if
+  the map is missing or stale.
+- **`data-model`** and **`implement`** read it for the persistence + wiring conventions the new
+  code must follow, instead of each re-discovering them.
+
+So you don't re-open "what's the current architecture?" at every stage — `survey` answers it once
+and the map carries it. Refresh the map (`survey` again) when the repo has drifted past the
+`reflects_commit` it records. In `design`, decisions expensive to reverse cross a blast-radius
+gate and become ADRs.
 
 ## The implementation engine
 
@@ -186,8 +210,9 @@ Docker probe for the integration tier.
 ## Quick start (idea → shipped)
 
 ```text
+/sdd-survey                             # once per repo: map the current architecture
 /sdd-classify-size checkout-discounts   # optional: size it first
-/sdd-specify       checkout-discounts   # ← start here (interview → spec)
+/sdd-specify       checkout-discounts   # interview → spec (reads the architecture map)
 /sdd-clarify       checkout-discounts
 /sdd-design        checkout-discounts
 /sdd-sequences     checkout-discounts

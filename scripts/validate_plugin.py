@@ -107,6 +107,46 @@ def main() -> int:
         check(bool(entry.get("description")), "marketplace entry has a description", "marketplace 'sdd' entry has no description")
         check(bool(entry.get("source")), "marketplace entry has a source", "marketplace 'sdd' entry has no source")
 
+    # --- cross-tool manifests: the Codex + Cursor mirrors carry the same name + version ---
+    # v1.9.0 ships .codex-plugin/ + .agents/plugins/ (Codex CLI) and .cursor-plugin/ (Cursor);
+    # a version bump that misses one of them would silently publish a stale manifest.
+    print("== cross-tool manifests ==")
+
+    def load_tool_manifest(rel: str):
+        path = ROOT / rel
+        if not check(path.exists(), f"{rel} exists", f"{rel} is missing"):
+            return None
+        try:
+            return json.loads(path.read_text())
+        except json.JSONDecodeError as exc:
+            check(False, "", f"{rel} is not valid JSON: {exc}")
+            return None
+
+    for rel in (".codex-plugin/plugin.json", ".cursor-plugin/plugin.json"):
+        data = load_tool_manifest(rel)
+        if data is None:
+            continue
+        check(data.get("name") == "sdd", f"{rel} name is 'sdd'",
+              f"{rel} name is {data.get('name')!r}, expected 'sdd'")
+        check(data.get("version") == version,
+              f"{rel} version matches plugin.json ({version})",
+              f"{rel} version {data.get('version')!r} != plugin.json {version!r}")
+
+    codex_market = load_tool_manifest(".agents/plugins/marketplace.json")
+    if codex_market is not None:
+        check(codex_market.get("name") == "sdd",
+              ".agents marketplace name is 'sdd'",
+              f".agents marketplace name is {codex_market.get('name')!r}, expected 'sdd'")
+        cm_entry = next((p for p in codex_market.get("plugins", []) if p.get("name") == "sdd"), None)
+        check(cm_entry is not None and bool(cm_entry.get("source")),
+              ".agents marketplace lists the 'sdd' plugin with a source",
+              ".agents/plugins/marketplace.json has no 'sdd' plugin entry with a source")
+
+    installer = ROOT / "install.sh"
+    check(installer.exists() and installer.read_text().startswith("#!/usr/bin/env bash"),
+          "install.sh exists and is a bash script (#!/usr/bin/env bash)",
+          "install.sh is missing or lacks the #!/usr/bin/env bash shebang")
+
     VALID_MODELS = {"haiku", "sonnet", "opus", "inherit"}
     VALID_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
     agent_names = {p.stem for p in (ROOT / "agents").glob("*.md")}

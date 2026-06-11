@@ -12,10 +12,34 @@ dial decides how much the skill decides for you vs. interrogates you with trade-
 
 ## Install
 
+**Claude Code** — native plugin:
+
 ```text
 /plugin marketplace add genkovich/sdd
 /plugin install sdd@sdd
 ```
+
+**Codex CLI** — one command (project-local; add `--global` after `codex` to install under `~`):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/genkovich/sdd/main/install.sh | bash -s -- codex
+```
+
+Or natively: `codex plugin marketplace add genkovich/sdd`. One naming nuance: the native plugin
+install registers the **original** skill names (`$specify`), while the installer script prefixes
+them — `$sdd-specify` — because bare names like `review` / `design` / `api` collide with generic
+skills.
+
+**Cursor** (2.4+) — the same script:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/genkovich/sdd/main/install.sh | bash -s -- cursor
+```
+
+Invoke a stage by typing `/` in the chat and picking `sdd-specify`. (Cursor also reads
+`.agents/skills/`, so a Codex install is already visible to Cursor.) How every Claude-specific
+mechanism — `AskUserQuestion`, subagents, `/clear`, the implement engine modes — maps to Codex /
+Cursor is one table: [`skills/_shared/tool-adapters.md`](./skills/_shared/tool-adapters.md).
 
 ## Start here
 
@@ -333,9 +357,12 @@ Artifacts land in `docs/features/<slug>/`.
 
 ```
 .claude-plugin/   plugin.json + marketplace.json (self-marketplace)
+.codex-plugin/    Codex CLI plugin manifest (+ .agents/plugins/marketplace.json — its self-marketplace)
+.cursor-plugin/   Cursor plugin manifest (skills/ + agents/ auto-discovered from the root)
+install.sh        Codex CLI / Cursor installer — copies the subtree, prefixes skill names, generates functional agents
 agents/           explorer, test-author, implementer, reviewer, critic, devils-advocate, researcher, strategist, analyst
 scripts/          validate_plugin.py (CI gate: manifests + skill/agent frontmatter + the consistency invariants — links resolve, /sdd: form, handoff block, single-source taxonomy, no _shared orphans)
-skills/_shared/   canonical socratic-loop / critic / size-matrix / ask-style / interview-depth / diagram-presentation / surfaces / handoff (referenced, not duplicated)
+skills/_shared/   canonical socratic-loop / critic / size-matrix / ask-style / interview-depth / diagram-presentation / surfaces / handoff / tool-adapters (referenced, not duplicated)
 skills/<name>/    SKILL.md spine + references/ (heavy detail) + templates/ (output scaffolds)
 ```
 

@@ -1,0 +1,16 @@
+{
+  "name": "sdd",
+  "interface": {
+    "displayName": "SDD — Spec-Driven Development"
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -24,3 +24,52 @@ jobs:
             echo "FAIL: found a reference to an excluded legacy dir/file"; exit 1
           fi
           echo "OK: no excluded-dir references"
+
+      - name: Lint install.sh
+        run: |
+          bash -n install.sh
+          shellcheck install.sh
+
+      - name: Smoke-install codex + cursor (install → assert → re-run → uninstall)
+        run: |
+          set -x
+          for tool in codex cursor; do
+            prefix=$(mktemp -d)
+            ./install.sh "$tool" --src . --prefix "$prefix"
+            case "$tool" in
+              codex)  skills="$prefix/.agents/skills"; agents="$prefix/.codex/agents" ;;
+              cursor) skills="$prefix/.cursor/skills"; agents="$prefix/.cursor/agents" ;;
+            esac
+            # the subtree is verbatim: skills renamed sdd-*, _shared + agents docs intact
+            grep -q '^name: sdd-specify$' "$skills/sdd/skills/specify/SKILL.md"
+            test "$(grep -rl '^name: sdd-' "$skills"/sdd/skills/*/SKILL.md | wc -l)" -eq 16
+            test -f "$skills/sdd/skills/_shared/handoff.md"
+            test -f "$skills/sdd/skills/_shared/tool-adapters.md"
+            test -f "$skills/sdd/agents/reviewer.md"
+            if [ "$tool" = codex ]; then
+              # every generated agent TOML parses; sandbox follows the tools declaration
+              python3 - "$agents" <<'EOF'
+          import sys, tomllib
+          from pathlib import Path
+          files = sorted(Path(sys.argv[1]).glob("sdd-*.toml"))
+          assert len(files) == 9, files
+          for f in files:
+              d = tomllib.load(open(f, "rb"))
+              assert d["name"] == f.stem and d["description"] and d["developer_instructions"], f
+              want = "workspace-write" if f.stem in ("sdd-implementer", "sdd-test-author") else "read-only"
+              assert d["sandbox_mode"] == want, (f.name, d["sandbox_mode"])
+          print(f"{len(files)} agent TOMLs OK")
+          EOF
+            else
+              grep -q '^name: sdd-reviewer$' "$agents/sdd-reviewer.md"
+              grep -q '^model: inherit$' "$agents/sdd-reviewer.md"
+              test "$(ls "$agents"/sdd-*.md | wc -l)" -eq 9
+            fi
+            # idempotency: a second run cleans first and converges to the same layout
+            ./install.sh "$tool" --src . --prefix "$prefix"
+            grep -q '^name: sdd-specify$' "$skills/sdd/skills/specify/SKILL.md"
+            # uninstall leaves the prefix clean
+            ./install.sh "$tool" --prefix "$prefix" --uninstall
+            test ! -e "$skills/sdd"
+            if ls "$agents"/sdd-* 2>/dev/null; then echo "FAIL: agents not removed"; exit 1; fi
+          done

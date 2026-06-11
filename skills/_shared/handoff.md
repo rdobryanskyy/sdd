@@ -6,6 +6,9 @@
 > exists because a bare «Next: …» line is hard to act on — the user can't tell what changed, which
 > files to open, or what to run next without scrolling back.
 
+Running under Codex CLI or Cursor? The `/clear` and `/sdd:<next>` forms map to the host tool's
+equivalents per [`tool-adapters.md`](./tool-adapters.md).
+
 ## TL;DR (короткий вступ українською)
 
 Кожен крок (skill) наприкінці **завжди** друкує однаковий хендоф-блок із трьох секцій:

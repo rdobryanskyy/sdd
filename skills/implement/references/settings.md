@@ -41,6 +41,8 @@ model_reviewer: opus
 effort_test_author: medium    # per-role effort; raised to high on escalation
 effort_implementer: medium
 effort_reviewer: high
+dashboard_enabled: false   # true → opt into the SDD visual dashboard (the sdd-dashboard MCP server + browser UI); see skills/start
+dashboard_port: 4178       # integer — loopback port the dashboard binds (scans upward if busy); read by the server
 ```
 
 ## What each key does
@@ -57,6 +59,8 @@ effort_reviewer: high
 - **`auto_commit`** — `per_task` (default), `per_phase`, or `off` (leave commits to the user).
 - **`branch_strategy`** — `feature`: ensure work is on a feature branch (create one if on the default branch); `current`: commit on the current branch.
 - **`cmd_*`** — explicit command overrides; non-empty values short-circuit detection (the escape hatch for unusual repos).
+- **`dashboard_enabled`** — `true | false` (default `false`). Opt into the **SDD visual dashboard**: the `sdd-dashboard` MCP server (auto-started from `.mcp.json`) binds a loopback HTTP+WS listener and serves the browser UI that shows every feature's pipeline stage, renders its artifacts, edits them back to disk, and drives the pipeline by sending `/sdd:<skill> <slug>` commands back into the live session. When `false` (or absent), the server stays idle — the markdown skills are unaffected. Run `/sdd:start` after enabling. Needs **Bun** installed. (Not read by the `implement` engine — read by the dashboard server + the `start` skill.)
+- **`dashboard_port`** — integer (default `4178`). The loopback port the dashboard binds; if busy the server scans upward (`4178..4189`) and `/sdd:start` prints the actual port. Only `127.0.0.1` is ever bound; mutating routes require the per-session capability token issued by `/sdd:start`.
 - **`model_*` / `effort_*`** — per-role model + effort for the three agents, applied when the engine spawns them (it overrides the agent's frontmatter default). Roster defaults + rationale → [`../../_shared/agent-roster.md`](../../_shared/agent-roster.md). Precedence: env var > this setting > agent frontmatter > session.
   - **Env path:** the engine also exports `CLAUDE_CODE_EFFORT_LEVEL` / `CLAUDE_CODE_SUBAGENT_MODEL` for the dispatch when these keys are set — the reliable lever (see [`agent-roster.md`](../../_shared/agent-roster.md) for why frontmatter alone may not suffice).
   - **`.size` scaling:** the engine raises the default effort for **L/XL** features (execution agents → `high`) before dispatch, and keeps the cheap defaults for **XS/S** — a cross-module change is where reasoning depth pays off. It prints the resolved per-role model+effort in the banner.

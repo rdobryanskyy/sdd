@@ -460,6 +460,9 @@ agents/           explorer, test-author, implementer, reviewer, critic, devils-a
 scripts/          validate_plugin.py (CI gate: manifests + skill/agent frontmatter + the consistency invariants — links resolve, /sdd: form, handoff block, single-source taxonomy, no _shared orphans)
 skills/_shared/   canonical socratic-loop / critic / size-matrix / ask-style / interview-depth / diagram-presentation / surfaces / handoff / tool-adapters (referenced, not duplicated)
 skills/<name>/    SKILL.md spine + references/ (heavy detail) + templates/ (output scaffolds)
+.mcp.json         declares the sdd-dashboard MCP server (auto-starts at session open; opt-in via dashboard_enabled)
+server/           the dashboard MCP server (Bun + TypeScript): server.ts (MCP stdio + Bun.serve HTTP/WS), state.ts (disk→pipeline derivation), channel.ts (dashboard_* tools + command allowlist), paths.ts (docs/ scoping)
+dashboard/        the browser UI (vanilla JS, terminal-green): index.html + app.js + style.css + vendor/ (marked, mermaid, redoc — vendored, offline)
 ```
 
 ## Roadmap
@@ -474,8 +477,38 @@ Directions under consideration — not promises, no dates:
   export is one-shot and copy-paste).
 - **Constitution file** — a repo-level set of inviolable rules (security, compliance, style) every
   stage reads and the validator enforces, complementing the per-feature artifacts.
-- **MCP exposure** — pipeline state (`.size`, stage progress, gate results) served over MCP so
-  external tools and dashboards can read where every feature stands.
+
+**Shipped:** ~~MCP exposure~~ → see **[The visual dashboard](#the-visual-dashboard-opt-in)** below.
+
+## The visual dashboard (opt-in)
+
+The roadmap's *"MCP exposure — pipeline state served over MCP so external tools and dashboards can read
+where every feature stands"* has shipped — and gained a control surface. The plugin now carries an
+**`sdd-dashboard` MCP server** (`server/`, Bun + TypeScript) that auto-starts at session open and, when
+enabled, serves a **local browser dashboard** (`dashboard/`) on `127.0.0.1`. It:
+
+- **Reads** every feature off disk (`docs/features/<slug>/`) and shows its pipeline as a per-step
+  checklist — `done` / `skipped` / `pending` / `blocked` — derived from the artifacts present (so an XS
+  feature shows *skipped* stages, not gaps). It renders each artifact: markdown, **mermaid** C4 / sequence
+  / ER diagrams, and **OpenAPI** (redoc) — all from **vendored** libs (offline, no CDN).
+- **Edits** artifact text back to disk — scoped to `docs/`, atomic `tmp+rename`, with optimistic-concurrency
+  `409` on a stale edit.
+- **Drives the pipeline** — clicking *Run next stage* / *Create feature* sends a validated
+  `/sdd:<skill> <slug>` command **back into this live session** over the same channel mechanism the official
+  Telegram plugin uses (`notifications/claude/channel`). Claude runs the skill and streams progress + the
+  handoff back to the browser. The dashboard is a **driver + observer**, not a synchronous remote: a click
+  is consumed only while the session is idle at the prompt — otherwise it **queues** (shown honestly in the UI).
+
+**Opt-in, two prerequisites.** It does nothing unless you ask for it:
+
+1. Install **[Bun](https://bun.sh)** (the server runtime — the same dependency the Telegram plugin uses).
+2. Set `dashboard_enabled: true` in `.claude/sdd.local.md` (see [Configuration](#configuration--claudesddlocalmd)).
+3. Run **`/sdd:start`** — it hands the server your project dir, confirms the channel, and prints the URL
+   (`http://127.0.0.1:<port>/?session=<id>&token=<cap>`). Pure-markdown users who skip this are unaffected.
+
+**Security:** binds loopback only; reads/writes are realpath-contained to `docs/` with an extension
+allowlist; mutating routes require a per-session capability token; inbound commands are built **only** from
+a server-side skill + slug allowlist (browser text never becomes an arbitrary `/sdd:` command).
 
 ## License
 

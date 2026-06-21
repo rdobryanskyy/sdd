@@ -1,7 +1,7 @@
 # SDD — Spec-Driven Development for Claude Code
 
 A self-contained Claude Code plugin that carries a feature from a one-line idea to
-**reviewed, verified, shipped** code through **17 atomic, stack-agnostic skills** and a
+**reviewed, verified, shipped** code through **18 atomic, stack-agnostic skills** and a
 **TDD implementation engine** — with a living roadmap above the per-feature flow.
 
 Every skill is Socratic (it walks decisions with you, it doesn't dump a wall of output),
@@ -120,6 +120,7 @@ after the code is written.
 
 ```mermaid
 flowchart LR
+    IV[interview<br/>optional] -.-> S
     SV[survey<br/>once per repo] --> S
     subgraph backbone["BACKBONE — run in order"]
         S[specify] --> CL[clarify] --> D[design] --> SQ[sequences] --> DM[data-model] --> API[api] --> T[tasks] --> PT[plan-tests] --> IM[implement]
@@ -173,6 +174,7 @@ end: a reviewed, verified change with a changelog and an open PR — merging to 
 
 ### Utilities — call whenever you need them (not part of the line)
 
+- **interview** *(before specify)* — stress-test a raw idea before you commit to a spec: a Socratic pass that surfaces hidden assumptions, names tradeoffs, and proposes sharper angles, ending with the weakest spot + the next step (usually `/sdd:specify`). Any idea, not just features; optional — reach for it when the idea itself isn't settled.
 - **classify-size** — size the feature XS/S/M/L/XL (writes `.size`); later skills read it to decide MVP vs full depth. Run it at the start, or any time scope changes.
 - **glossary** — capture a domain term in `CONTEXT.md` with a definition. Run it whenever a new term shows up; `design` and the spec read the glossary.
 - **decide-adr** — write a standalone ADR after the fact, when `tasks` (or a review) flags a decision that needs recording but wasn't captured during `design`.

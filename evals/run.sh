@@ -8,7 +8,10 @@
 set -euo pipefail
 
 EVALS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$EVALS_DIR/.." && pwd)"   # the sdd plugin under test — loaded via --plugin-dir
 MAX_TURNS="${SDD_EVAL_MAX_TURNS:-40}"
+# NB: an EMPTY array + `set -u` breaks on macOS bash 3.2 — expand with the
+# ${arr[@]+"${arr[@]}"} idiom everywhere.
 MODEL_ARGS=()
 [ -n "${SDD_EVAL_MODEL:-}" ] && MODEL_ARGS=(--model "$SDD_EVAL_MODEL")
 
@@ -20,8 +23,9 @@ run_scenario() {
   local dir="$EVALS_DIR/scenarios/$name"
   [ -d "$dir" ] || { echo "FATAL: no such scenario: $name" >&2; return 2; }
 
-  local work
+  local work meta
   work="$(mktemp -d "${TMPDIR:-/tmp}/sdd-eval-$name.XXXXXX")"
+  meta="$(mktemp -d "${TMPDIR:-/tmp}/sdd-eval-$name-meta.XXXXXX")" # transcript + judge prompt live OUTSIDE the repo under test
   echo "== $name  (workdir: $work)"
 
   # 1. Fixture → git baseline.
@@ -31,20 +35,26 @@ run_scenario() {
   git -C "$work" -c user.email=eval@sdd -c user.name=sdd-eval commit -qm baseline
 
   # 2. The run under test — headless; the prompt pins --depth=easy (a headless
-  #    run cannot answer AskUserQuestion).
-  local out="$work/.eval-run.json"
+  #    run cannot answer AskUserQuestion). --plugin-dir loads the sdd plugin
+  #    from THIS checkout, so the eval exercises the working tree, not whatever
+  #    version happens to be installed.
+  local out="$meta/run.json"
   ( cd "$work" && claude -p "$(cat "$dir/prompt.txt")" \
+      --plugin-dir "$REPO_ROOT" \
       --permission-mode acceptEdits --max-turns "$MAX_TURNS" \
-      --output-format json "${MODEL_ARGS[@]}" > "$out" ) || true
+      --output-format json ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} > "$out" ) || true
 
+  # --output-format json is an object in some CLI versions, an array of
+  # messages (result last) in others — accept both.
+  local extract='if type=="array" then (last.result // empty) else (.result // empty) end'
   local final_msg tree diff
-  final_msg="$(jq -r '.result // empty' "$out" 2>/dev/null | tail -c 4000 || true)"
+  final_msg="$(jq -r "$extract" "$out" 2>/dev/null | tail -c 4000 || true)"
   tree="$(cd "$work" && find . -path ./.git -prune -o -type f -print | sort)"
   git -C "$work" add -A
   diff="$( { git -C "$work" diff --cached --stat HEAD | head -40; git -C "$work" diff --cached HEAD | head -400; } || true)"
 
   # 3. The judge — rubric + observed outcome → one JSON verdict.
-  local jp="$work/.judge-prompt.md"
+  local jp="$meta/judge-prompt.md"
   # shellcheck disable=SC2016  # the backticks are literal markdown fences
   {
     cat "$EVALS_DIR/judge-prompt.md"
@@ -55,7 +65,7 @@ run_scenario() {
   } > "$jp"
 
   local judge_out verdict
-  judge_out="$(claude -p "$(cat "$jp")" --output-format json "${MODEL_ARGS[@]}" | jq -r '.result // empty')"
+  judge_out="$(claude -p "$(cat "$jp")" --output-format json ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} | jq -r "$extract")"
   verdict="$(printf '%s' "$judge_out" | sed -n 's/.*"verdict"[[:space:]]*:[[:space:]]*"\([A-Z]*\)".*/\1/p' | head -1)"
 
   printf '%s\n' "$judge_out"

@@ -11,8 +11,9 @@ gates refuse, artifacts land in shape, handoffs are emitted.
 
 ## Prerequisites
 
-- `claude` CLI installed and logged in, with the **sdd plugin installed** (`/plugin install sdd@sdd`)
-  — the scenarios invoke `/sdd:<skill>` commands.
+- `claude` CLI installed and logged in. The sdd plugin does **not** need to be installed —
+  `run.sh` loads it from this checkout via `--plugin-dir`, so the eval exercises the working
+  tree, not an installed version.
 - `jq`, `git` on PATH.
 - Budget: one scenario ≈ one short agent session + one judge call.
 

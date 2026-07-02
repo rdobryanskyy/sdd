@@ -157,7 +157,7 @@ def main() -> int:
           "install.sh exists and is a bash script (#!/usr/bin/env bash)",
           "install.sh is missing or lacks the #!/usr/bin/env bash shebang")
 
-    VALID_MODELS = {"haiku", "sonnet", "opus", "inherit"}
+    VALID_MODELS = {"haiku", "sonnet", "opus", "fable", "inherit"}
     VALID_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
     agent_names = {p.stem for p in (ROOT / "agents").glob("*.md")}
 
@@ -352,6 +352,16 @@ def main() -> int:
               (f"taxonomy row `{row} …` is duplicated in a SKILL.md (must live only in _shared/surfaces.md): "
                + ", ".join(dups)) if dups
               else f"taxonomy row `{row} …` is missing from _shared/surfaces.md (did it move/rename?)")
+
+    # --- model policy consistency: judgment_model is documented in both policy files ---
+    # The judgment_model settings key (opus|fable switch for the judgment agents) is defined in
+    # the settings doc and consumed per agent-roster's precedence — if either file drops the
+    # mention, the policy silently forks.
+    print("== model policy ==")
+    for rel in ("skills/implement/references/settings.md", "skills/_shared/agent-roster.md"):
+        check("judgment_model" in (ROOT / rel).read_text(),
+              f"{rel} documents judgment_model",
+              f"{rel} never mentions 'judgment_model' — the settings doc and the roster policy must both carry it")
 
     # --- the route table is single-source in _shared/size-matrix.md + `.route` is threaded ---
     # The Routes table (quick/standard/full handoff behaviour) lives ONLY in size-matrix.md;

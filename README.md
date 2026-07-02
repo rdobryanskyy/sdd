@@ -315,7 +315,7 @@ how much reasoning effort, and which agents it spawns:
 
 ```yaml
 # a skill's frontmatter
-model: opus        # haiku | sonnet | opus | inherit
+model: opus        # haiku | sonnet | opus | fable | inherit (fable — reachable via judgment_model / env, agents keep tier-alias defaults)
 effort: high       # low | medium | high | xhigh | max
 agents: [critic]   # the agents this skill spawns
 ```
@@ -337,8 +337,16 @@ The nine agents (`agents/`): **explorer** (brownfield scan), **test-author** (fa
 emit only cited findings. The last three are the **ideation analyses**, dispatched by `specify` and
 gated by the depth dial (easy skips them; hard runs the full suite).
 
-The full policy — override precedence, the `.size` scaling, and the env-var fallback for the
-`effort:` no-op some builds have — lives in one place: [`skills/_shared/agent-roster.md`](./skills/_shared/agent-roster.md).
+Two policy levers sit on top of the table. **`judgment_model`** (`.claude/sdd.local.md`;
+`opus | fable`) raises **all** judgment agents (`reviewer` / `critic` / `devils-advocate` /
+`strategist` / `analyst`) to the Mythos-tier model in one switch — `agents/*.md` keep their
+tier-alias defaults; a per-role `model_<role>` key still wins. And on **L/XL** features the
+critical verifications — the `reviewer` in `review` and the `critic` in `design`/`specify` — run
+at **`effort: xhigh`** (via `CLAUDE_CODE_EFFORT_LEVEL`); the rest of the judgment work stays `high`.
+
+The full policy — override precedence (`env > invocation > model_<role> > judgment_model >
+frontmatter > session`), the `.size` scaling, and the env-var fallback for the `effort:` no-op
+some builds have — lives in one place: [`skills/_shared/agent-roster.md`](./skills/_shared/agent-roster.md).
 Short version: if a run feels under-reasoned, set `CLAUDE_CODE_EFFORT_LEVEL`.
 
 ### Configuration — `.claude/sdd.local.md`
@@ -372,6 +380,7 @@ cmd_vet: ""
 model_test_author: sonnet  # per-role model + effort (see Models, effort & agents)
 model_implementer: sonnet
 model_reviewer: opus
+judgment_model: opus       # opus | fable — one switch for all judgment agents (reviewer/critic/devils-advocate/strategist/analyst)
 effort_test_author: medium # raised to high on escalation / for L-XL features
 effort_implementer: medium
 effort_reviewer: high

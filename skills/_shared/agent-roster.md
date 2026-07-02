@@ -41,8 +41,16 @@ degrade-don't-block rule and the full mapping table: [`tool-adapters.md`](./tool
 ## Override precedence (highest wins)
 
 ```
-env var  >  per-invocation (the Agent call)  >  frontmatter  >  session
+env var  >  per-invocation (the Agent call)  >  model_<role>  >  judgment_model  >  frontmatter  >  session
 ```
+
+**`judgment_model`** (`.claude/sdd.local.md`; `opus | fable`, default `opus`) is the one-switch
+tier for the **judgment agents** — `reviewer` / `critic` / `devils-advocate` / `strategist` /
+`analyst`. Setting it to `fable` raises all five to the Mythos-tier model without touching
+`agents/*.md` (their frontmatter stays the tier-alias default); a per-role `model_<role>` key
+still wins for its role. It never applies to execution (`test-author` / `implementer`) or
+gathering (`explorer` / `researcher`) roles. See the settings doc:
+[`../implement/references/settings.md`](../implement/references/settings.md).
 
 - **`model`** env: `CLAUDE_CODE_SUBAGENT_MODEL`. Values: `haiku|sonnet|opus|inherit|<full-model-id>`.
 - **`effort`** env: `CLAUDE_CODE_EFFORT_LEVEL`. Values: `low|medium|high|xhigh|max|<number>` (`xhigh`/`max` only on Opus 4.8 / 4.7).
@@ -60,7 +68,11 @@ Default effort/model scale with the feature `.size` (see [`size-matrix.md`](./si
 
 - **XS/S** → keep the roster defaults (cheap; the work is small).
 - **M** → roster defaults; escalation handles the hard tasks.
-- **L/XL** → bump execution effort to `high` and let judgment agents stay `high`; a cross-module change is where reasoning depth pays off.
+- **L/XL** → bump execution effort to `high`; **the critical verifications go to `xhigh`** — the
+  `reviewer` (dispatched by `review`) and the `critic` (dispatched by `design` / `specify`) run at
+  `effort: xhigh` via `CLAUDE_CODE_EFFORT_LEVEL` (the reliable lever — see the caveat above); the
+  other judgment agents stay `high`. A cross-module change is where reasoning depth pays off, and
+  the final review/critique is where it pays off most.
 
 A skill/engine that knows the size applies this before dispatch and says so in its banner.
 

@@ -546,25 +546,31 @@ Three mechanisms, layered:
 
 ### How you control it
 
-The **▶ Run next stage** / per-stage **run** / **+ new** buttons drive your live session — with honest
-**asynchronous** semantics:
+The **▶ Run next stage** / per-stage **run** / **⚒ Fix** (appears on a CHANGES REQUESTED review) /
+**+ new** buttons drive your live session — with honest **asynchronous** semantics:
 
 - A click sends the request to the server, which builds a validated `/sdd:<skill> <slug>` command from
   a strict server-side allowlist and **queues** it into your Claude session — over the same channel
   mechanism the official Telegram plugin uses (`notifications/claude/channel`).
 - The session consumes a queued command **only while idle at the prompt**. If Claude is mid-task, the
-  command waits; the status line shows `queued → running → done` and the UI never fakes synchronous
-  execution.
-- Dashboard-driven runs default to `--depth=easy`, so skills self-decide reversible calls and rarely
-  block on questions.
-- Free browser text can never become a command — only the validated skill name + slug pass the
-  allowlist.
+  command waits; every queued command gets its own `queued → running → done` status line and the UI
+  never fakes synchronous execution.
+- The **depth selector** (topbar) sets `--depth` for dashboard-driven runs: `easy` (default — skills
+  self-decide reversible calls and rarely block on questions), `medium`, or `hard`.
+- If a dashboard-driven run genuinely needs a human decision, Claude posts the question **into the
+  panel** (`dashboard_ask`): a card with 2–4 option buttons appears in the activity pane and the run
+  pauses; your click sends the answer back through the same queue and the run resumes. The browser
+  only ever sends an option *index* — the option text was authored by Claude itself. You can always
+  answer in the terminal instead.
+- Free browser text can never become a command — only the validated skill name + slug + depth pass
+  the allowlist.
 
 ### What the panel does NOT do
 
 - It never writes to disk — artifacts are edited only by the pipeline in your terminal.
-- It has no chat input and cannot answer a blocking `AskUserQuestion` — if a stage genuinely needs a
-  human decision, the question is visible only in the terminal; answer it there and the run continues.
+- It has no chat input, and a blocking `AskUserQuestion` in the **terminal** stays terminal-only —
+  the panel's option cards exist precisely so dashboard-driven runs don't block there, but free text
+  never travels from the browser into the session.
 - It doesn't survive a server restart — re-run `/sdd:start` for a fresh URL/token.
 
 **Setup, config & troubleshooting:** [`server/README.md`](./server/README.md).

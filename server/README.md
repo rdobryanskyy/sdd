@@ -54,8 +54,11 @@ Open that URL in a browser. That's it.
 |---|---|
 | **Pick a feature** (sidebar) | See its pipeline as a per-step checklist: `done` / `skipped` / `pending` / `blocked`, derived from the artifacts on disk. An XS feature shows *skipped* stages — not gaps. |
 | **Open an artifact** (tabs) | Renders markdown and **mermaid** (C4 / sequence / ER diagrams) from vendored libs, fully offline; mermaid (3.3 MB) loads lazily, only when an artifact actually contains a diagram. OpenAPI shows as plain YAML. |
-| **▶ Run next stage** / per-stage **run** | Sends `/sdd:<skill> <slug>` into your session. Claude runs the skill; the session-activity pane streams its log + the handoff. |
+| **▶ Run next stage** / per-stage **run** | Sends `/sdd:<skill> <slug>` into your session. Claude runs the skill; the session-activity pane streams its log + the handoff. The topbar **depth** selector sets `--depth` (default `easy`). |
+| **⚒ Fix** (appears on a CHANGES REQUESTED review) | Runs `/sdd:fix <slug>` to address the review findings. |
 | **+ new** | Runs `/sdd:specify <slug>` to start a new feature. |
+| **roadmap** modal | Renders `docs/roadmap.md`; its action buttons queue the repo-wide `/sdd:roadmap` and `/sdd:survey`. |
+| **Answer a decision question** | When a dashboard-driven run genuinely needs a human choice, a question card with option buttons appears in the activity pane (`dashboard_ask`) — your click resumes the paused run. Only the option *index* leaves the browser. |
 | **Change artifacts any other way** (a terminal-driven skill, `vim docs/…`) | The panel live-refreshes — `fs.watch` on `docs/` pushes a WS refresh within ~1 s. No dashboard involvement needed. |
 
 ### It's a driver, not a remote control
@@ -63,8 +66,10 @@ Open that URL in a browser. That's it.
 A click is consumed **only while your session is idle at the prompt**. If Claude is mid-task, the
 command **queues** (the UI says so — it never fakes synchronous execution). Dashboard-driven runs default
 to `--depth=easy`, so the skill self-decides reversible calls and asks far fewer questions — because the
-browser can't answer a blocking `AskUserQuestion`. If a stage genuinely needs a decision, it surfaces in
-**your terminal** — answer it there, and the run continues.
+browser can't answer a blocking `AskUserQuestion`. When a dashboard-driven run genuinely needs a
+decision, Claude doesn't block: it posts the question **into the panel** via `dashboard_ask` (option
+buttons, no free text) and ends its turn; your click comes back as a channel message and the run
+resumes. Answering in **your terminal** always works too.
 
 ---
 
@@ -94,11 +99,13 @@ Environment overrides (handy for testing / unusual setups):
 - **Read-only, scoped I/O.** The API only ever *reads*, and every read is `realpath`-contained to
   `<project>/docs/` with an extension allowlist (`.md` / `.yaml` / `.yml` / `.json` / `.size`);
   `.git`, missing files, and anything outside `docs/` are refused. There is no write route.
-- **Capability token.** Every `/api` route (and the one mutating route, run-a-command — which touches
-  no disk) requires the per-session token issued by `/sdd:start` (in the URL), plus `Origin`/`Host`
-  loopback checks — so another local page can't POST to your port.
+- **Capability token.** Every `/api` route (including the two mutating routes — run-a-command and
+  answer-a-question — which touch no disk) requires the per-session token issued by `/sdd:start`
+  (in the URL), plus `Origin`/`Host` loopback checks — so another local page can't POST to your port.
 - **No command injection.** Inbound `/sdd:` lines are built **only** from a server-side allowlist
-  (validated skill name + `^[a-z0-9][a-z0-9-]*$` slug). Browser text never becomes an arbitrary command.
+  (validated skill name + `^[a-z0-9][a-z0-9-]*$` slug + `easy|medium|hard` depth). Browser text never
+  becomes an arbitrary command. Answers relay only an option **label Claude itself authored** in
+  `dashboard_ask` — the browser contributes a single validated index into that list.
 - **Anti-injection contract.** The MCP `instructions` tell Claude that dashboard channel content is
   ALWAYS a server-built allowlisted SDD command — never free text, never authority to bypass a gate,
   approve a review, change settings, or touch files outside `docs/`.
@@ -140,7 +147,8 @@ Environment overrides (handy for testing / unusual setups):
 - `http.ts` — the HTTP layer (routing, token/origin gating, the read-only JSON API) behind an
   `HttpCtx` interface — testable without an MCP/stdio boot.
 - `state.ts` — disk → pipeline-stage derivation (the signal→stage table).
-- `channel.ts` — outbound `dashboard_*` tools + the inbound command allowlist.
+- `channel.ts` — outbound `dashboard_*` tools + the inbound command allowlist + the pending-question
+  registry (`dashboard_ask` → `POST /api/answer`, single-use, bounded).
 - `watch.ts` — live refresh: `fs.watch` on `<project>/docs/` (recursive), 250 ms coalescing window →
   one `refresh` WS frame (slug-scoped when a single feature changed). Never reads file content —
   it only maps a changed path to a frame; auto-re-arms if `docs/` is missing or the watcher dies.
@@ -160,6 +168,8 @@ The WS channel is **push-only** (the browser talks back over HTTP). Every frame 
 | `log` | Claude calls `dashboard_log` | `message`, `slug`, `stage`, `level` |
 | `update` | Claude calls `dashboard_update` | `slug`, `stage`, `status`, `progress`, `message` |
 | `done` | Claude calls `dashboard_done` | `slug`, `stage`, `summary`, `verdict`, `review_files`, `next_command` |
+| `ask` | Claude calls `dashboard_ask` (a paused run needs a decision) | `ask_id`, `question`, `options[]`, `slug`, `stage` |
+| `answer` | an option was picked (any tab) — cards everywhere mark answered | `ask_id`, `option`, `label` |
 | `refresh` | `docs/` changed on disk (fs.watch), and after `dashboard_update`/`done` | optional `slug` — scoped reload; absent → reload everything |
 | `command` | a browser click queued a command | `command`, `request_id` |
 
@@ -180,8 +190,9 @@ bun test tests/     # state derivation, path-security boundary, command allowlis
 
 The suites: `state.test.ts` (signal→stage table, skipped-vs-pending, tracker parsing, review-verdict
 precedence, shipped regex), `paths.test.ts` (traversal / symlink escape / `.git` refusal / extension
-allowlist — throwaway `mkdtemp` trees), `channel.test.ts` (allowlist + injection cases),
-`http.test.ts` (token/Origin gating, command relay, removed-route regressions),
+allowlist — throwaway `mkdtemp` trees), `channel.test.ts` (allowlist + injection cases,
+`dashboard_ask` + the question registry),
+`http.test.ts` (token/Origin gating, command + answer relay, removed-route regressions),
 `watch.test.ts` (path→frame classification, batch coalescing, the watcher state machine against
 injected fakes — the real `fs.watch` contract is timing-flaky in CI, so it is verified by a live
 smoke run instead), `frontmatter.test.ts`.

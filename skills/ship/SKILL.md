@@ -42,6 +42,7 @@ The implementer (drives) + the reviewer who signed off in `review`.
 - The gate was re-run and the feature was exercised against its AC (or the deferral was stated explicitly with the reason).
 - A changelog / KB note exists, linking spec + ADRs.
 - A PR body is prepared and the forge-appropriate PR command proposed (work on a feature branch; main untouched).
+- The run-the-feature verification (real run against the ACs, not just green tests) is this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

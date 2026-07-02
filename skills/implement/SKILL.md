@@ -67,6 +67,7 @@ else:                                                        → SEQUENTIAL sing
 - Unit gate green; integration green where available (or NON-red recorded with the policy reason); lint + vet clean per the detected commands.
 - The active mode + settings were printed in the banner before execution.
 - `tracker.md` reflects final status; the summary reports the gate results and hands off to `review` (the independent review gate) — `implement` does not self-certify the whole change.
+- The per-task GATE (unit + integration + lint + vet) is this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its results are reported in the handoff.
 
 ## Anti-patterns
 

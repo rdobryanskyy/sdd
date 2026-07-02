@@ -67,6 +67,7 @@ Backend Lead (drives the interface). The PM confirms each endpoint maps to a rea
 - `api-sync-report.md` written alongside: field-origins table + the 4-point drift checklist, every core finding ✓ or explicitly resolved with the user.
 - Every endpoint maps to a §4 user story; every field traces to a `data-model.md` column; every error `code` exists in the repo's error definitions (checked in the form the repo uses).
 - `contracts/events.md` present iff the feature has async flows; each event has a payload schema, producer, consumers, retry / DLQ note.
+- The step-7 bidirectional drift check + `api-sync-report.md` are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

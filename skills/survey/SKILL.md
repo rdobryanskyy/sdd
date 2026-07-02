@@ -56,6 +56,7 @@ G6. **Emit the scaffold + hand off.** Write a scaffold `tasks.json` (the skeleto
 - `docs/architecture-map.md` exists with `updated_at` + `reflects_commit`; an authored doc (if any) was reconciled, never overwritten.
 - **Brownfield:** C4 of what exists + module inventory + cited conventions + precedent guide, real anchors (no placeholders).
 - **Greenfield:** foundation fixed (stack/structure/data/conventions) at the user's calibrated level + foundational ADRs + a scaffold `tasks.json` whose tasks carry the skeleton smoke-test DoD, ready for `implement`.
+- The mermaid-check validation + the `file:line`-cited conventions + the `reflects_commit` stamp are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

@@ -84,6 +84,7 @@ What it **does apply regardless of stack** — migration **safety**, not DB phil
 - For every entity/change, a matched `.up.sql` + `.down.sql` pair exists **under `docs/features/<slug>/migrations/`** (staged, feature-local ordinal names) — **nothing was written into the live `migrations/` tree** (that's `implement`'s promotion step). The SQL still follows the repo's detected convention.
 - All 4 self-checks pass.
 - Audit report written (with the staged paths + the promote-time number hint); drift report (with `_drift/*.sql`) if drift was detected.
+- The step-12 4-mandatory check + step-11 drift detection are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

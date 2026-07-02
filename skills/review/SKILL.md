@@ -43,6 +43,7 @@ Tech Lead / a reviewer who did **not** write the code (independence is the point
 - Every claimed AC was checked for genuine satisfaction; **the whole §4 user-story set + §5 AC set was traced end-to-end (spec → sequences → data-model → api → tasks → implement)** — every §4 US has ≥1 AC and a §6 flow, every §5 AC reaches code+test — and anything that dropped out anywhere in the chain was flagged, not just the ACs the diff claims. Every in-scope user story / AC is covered or explicitly deferred with owner + due.
 - Every finding is resolved (fixed / deferred / dismissed-with-reason); no open stage-1 finding remains.
 - A review record exists with a `PASS` / `CHANGES REQUESTED` verdict.
+- The clean-context reviewer pass (the whole skill is a verifier) is this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); the verdict is its report.
 
 ## Anti-patterns
 

@@ -53,6 +53,7 @@ PM + Tech Lead (the spec's co-authors resolve their own ambiguities). PM owns va
 - Resolve edits preserve `specify`'s contracts: §5 AC carry no HTTP/status/error-code/SQL tokens, §6 NFR rows carry a numeric target + measurement (no adjectives), §4 roles match the CONTEXT glossary.
 - The devil's-advocate subagent actually ran (clean context, Read the spec itself) — not skipped, not paraphrased into the main thread.
 - `updated_at` reflects today; edits-log kept; commit proposed.
+- The devil's-advocate sweep + the zero-dangling resolution rule are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

@@ -55,6 +55,7 @@ PM + Tech Lead (co-authors). PM drives goals / non-goals / KPIs; Tech Lead drive
 - §4 roles match the `CONTEXT.md` glossary exactly (no invented `user`/`admin`).
 - §8 Open Questions each carry owner + due (no lone «TBD»).
 - Edits-log maintained; critic ran on the post-Socratic draft; every finding resolved or overridden.
+- The step-8 critic + the forbidden-token regex backstop are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

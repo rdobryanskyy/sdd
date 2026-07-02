@@ -58,6 +58,7 @@ Architect / Tech Lead (drives everything). PM is consulted only on §10 Quality 
 - §11 carries a row for every `save_as_oq` decision with both owner AND due (severity literal `Open question`); never N/A.
 - §1 Stakeholders + §3 actors match the glossary exactly when a `CONTEXT.md` exists (per-feature wins over root), else the spec's §4 roles (no invented `user`/`admin`).
 - Step-3 Explore ran on a brownfield (or §3 has the greenfield note). Edits-log maintained. The critic ran on the post-Socratic SAD; every finding resolved or overridden.
+- The step-7 critic + pre-write backstop scans (mermaid-check, ADR-title form, §9 closure, no-placeholder) are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

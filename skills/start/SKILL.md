@@ -92,6 +92,7 @@ The developer running the session. No artifact is produced — this is a connect
   (fallback only, when that file is absent) obtained from `dashboard_handshake` after a Bun check.
 - The queued/busy/`--depth=easy` behaviour stated so the user knows the dashboard is a driver, not a remote control.
 - The stage-handoff block emitted (utility variant).
+- This skill writes no artifact — the DoD gates above (opt-in confirmed, URL only from `current.url`/handshake) are its **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)).
 
 ## Anti-patterns
 

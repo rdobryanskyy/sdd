@@ -54,6 +54,7 @@ No depth dial and no `.size` here — a fix is one size, and the interview is th
 - The triage outcome is explicit — regression / spec-bug / gap / no-spec — and the matching spec patch is applied (or its absence explained in the record).
 - `docs/features/<slug>/_fixes/<date>-<short-slug>.md` exists: symptom, root cause, the test, the spec patch, follow-ups.
 - The commit carries the `SDD-Fix:` trailer (+ `SDD-AC:` when traced); any spec change was user-confirmed.
+- The RED-pin (failing test first) + the per-task GATE are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

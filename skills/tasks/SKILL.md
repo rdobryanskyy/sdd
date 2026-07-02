@@ -77,6 +77,7 @@ Tech Lead.
 - `tasks.json` exists and validates: acyclic `deps`, every `acs` entry is a real spec §5 AC, every task has a `dod` and a `files_hint`.
 - Every task ≤1 day with an owner; the DAG shows ≥1 parallel branch where the work allows.
 - Every spec §5 AC is covered by ≥1 task's `acs`.
+- The step-12 check (atomicity, acyclic DAG, per-task DoD, AC coverage, `tasks.json` contract) is this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

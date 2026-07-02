@@ -300,6 +300,19 @@ def main() -> int:
               f"skill '{base}' emits the stage-handoff block (the literal phrase is present)",
               f"skill '{base}' SKILL.md never says 'stage-handoff block' — every stage must end with «emit the stage-handoff block per _shared/handoff.md»")
 
+    # --- every skill verifies its own output (the structural self-check contract) ---
+    # _shared/self-check.md defines the contract; every SKILL.md either runs a named checklist
+    # or maps its heavy verifier (critic/reviewer/drift/mermaid/GATE) onto it — the literal
+    # phrase «structural self-check» is the greppable evidence, same mechanism as the
+    # stage-handoff check above.
+    print("== structural self-check ==")
+    for skill_md in skill_specs:
+        base = skill_md.parent.name
+        check("structural self-check" in skill_md.read_text().lower(),
+              f"skill '{base}' names its structural self-check",
+              f"skill '{base}' SKILL.md never says 'structural self-check' — every skill must run "
+              f"the checklist (or map its heavy verifier) per _shared/self-check.md")
+
     # --- skill dir names are BRE-safe (install.sh interpolates them into a sed pattern) ---
     print("== skill dir names ==")
     DIRNAME_RE = re.compile(r"^[a-z0-9-]+$")

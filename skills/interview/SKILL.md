@@ -113,9 +113,11 @@ A full annotated medium-depth pass → [`references/annotated-pass.md`](referenc
 
 ## Hand off
 
-interview writes **no files** — it sharpens the idea in the user's head. After the summary,
-**emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility
-variant — `/clear` optional): *What I did* (the revised idea + its weakest spot) + *Review*
+interview writes **no files** — it sharpens the idea in the user's head, so the final summary
+checked against its mini/full format is this skill's **structural self-check**
+([`../_shared/self-check.md`](../_shared/self-check.md)) — nothing on disk to re-read. After the
+summary, **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md)
+(utility variant — `/clear` optional): *What I did* (the revised idea + its weakest spot) + *Review*
 (nothing on disk — the summary above is the artifact) + *Run next*: when the idea is a feature
 you intend to build, `/sdd:specify <slug>` turns the survivor into a spec; otherwise resume
 whatever you were doing. Never end on a bare «Next: …».

@@ -56,6 +56,7 @@ Tech Lead (drives the runtime decomposition). The PM confirms that each drawn fl
 - Each flow shows the error branches its spec acceptance criteria require, not happy-path only; every mutating step carries a generic persist note for `data-model`.
 - Every async flow has an idempotency-key step, a retry note, and a dead-letter branch.
 - Pre-existing §6 blocks are untouched; new participants / ADR-worthy decisions are flagged, not silently added.
+- The step-7 use-case + AC coverage check + the step-8 mermaid re-validation are this skill's **structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)); its result is reported in the handoff.
 
 ## Anti-patterns
 

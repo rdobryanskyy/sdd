@@ -2,6 +2,7 @@
 name: start
 model: inherit
 effort: low
+agents: []
 description: >
   Use to open the SDD visual dashboard — the local browser UI that shows every feature's
   pipeline stage, renders its artifacts (markdown, mermaid C4/sequence/ER, OpenAPI/swagger),

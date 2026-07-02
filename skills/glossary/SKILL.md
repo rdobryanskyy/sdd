@@ -9,12 +9,14 @@ description: >
   canonical definition plus a NOT-reference so a homonym can't bite you in six months.
   Triggers on "add term {X}", "what is {X} in our domain", "add to CONTEXT", "fix the
   glossary", "define {X}", "/sdd:glossary {term}", "додай термін", "онови глосарій",
-  "що означає {X}". Lazy-bootstraps docs/features/{slug}/CONTEXT.md (or repo-root
-  CONTEXT.md) from a template, checks for a conflicting existing entry, asks for a
-  one-sentence definition + the concept it's confused with, and appends one line to
-  ## Glossary. Skip generic tech words (HTTP, queue, cache) — those are not domain terms.
-  Output: created/edited CONTEXT.md. Runs anytime, no input gate; specify and design
-  read its ## Glossary as the canonical source of role and domain-term names.
+  "що означає {X}". Two-level contract: repo-root CONTEXT.md holds project-wide terms,
+  docs/features/{slug}/CONTEXT.md holds feature-scoped ones; readers read both and the
+  per-feature entry wins. Lazy-bootstraps the target from a template, checks BOTH levels
+  for a conflicting existing entry, asks for a one-sentence definition + the concept it's
+  confused with, and appends one line to ## Glossary. Skip generic tech words (HTTP, queue,
+  cache) — those are not domain terms. Output: created/edited CONTEXT.md. Runs anytime, no
+  input gate; specify, clarify, design and api read its ## Glossary as the canonical source
+  of role and domain-term names.
 ---
 
 # Skill: glossary
@@ -38,13 +40,13 @@ Whoever drives the conversation — anyone who spots ambiguity. Tech Lead approv
 
 ## Protocol
 
-1. **Pick the target.** If `<slug>` is given → `docs/features/<slug>/CONTEXT.md`. Otherwise → repo-root `CONTEXT.md`. One glossary per file; don't split a term across both.
+1. **Pick the target (the two-level contract).** Root `CONTEXT.md` = **project-wide** terms (meaningful across features); `docs/features/<slug>/CONTEXT.md` = **feature-scoped** terms (meaningful only inside that feature). If `<slug>` is given → the per-feature file; otherwise → repo-root. A term lives in exactly **one** of the two files — never split or duplicate it across levels. Readers (`specify`, `clarify`, `design`, `api`) read **both** files; on a conflict the per-feature entry wins.
 2. **Generic-term filter.** Reject words that name infrastructure or transport rather than the business domain (e.g. HTTP, queue, cache, the datastore, the broker, a framework). Refuse: «`<term>` is technical, not a domain word — its choice belongs in the SAD or an ADR, not the glossary». Continue only for genuine domain vocabulary.
 3. **Bootstrap (lazy).** `test -f <target>`. Missing → copy [`./templates/CONTEXT.md`](./templates/CONTEXT.md) to `<target>`. Present → read it.
-4. **Conflict check.** `grep -i "^- <term>" <target>`.
-   - Found, identical sense → STOP, report «already in the glossary».
-   - Found, different sense → escalate via `AskUserQuestion` (phrasing per [`../_shared/ask-style.md`](../_shared/ask-style.md)): «`<term>` is already defined as `<existing>` — same concept or a different one?». If different, propose a disambiguating pair of names (e.g. a billing-scoped vs a runtime-scoped variant) and fix both.
-   - Not found → continue.
+4. **Conflict check — both levels.** `grep -i "^- <term>" <target>` AND the other level's file when it exists (root `CONTEXT.md` ↔ `docs/features/<slug>/CONTEXT.md`).
+   - Found (either level), identical sense → STOP, report «already in the glossary» + which file holds it — never duplicate a term across levels.
+   - Found (either level), different sense → escalate via `AskUserQuestion` (phrasing per [`../_shared/ask-style.md`](../_shared/ask-style.md)): «`<term>` is already defined as `<existing>` in `<file>` — same concept or a different one?». If different: a genuinely feature-scoped narrowing goes to the per-feature file (readers let it win there); otherwise propose a disambiguating pair of names (e.g. a billing-scoped vs a runtime-scoped variant) and fix both.
+   - Not found in either → continue.
 5. **Ask the canonical definition** — one `AskUserQuestion`: «Define `<term>` in this domain, in one sentence». Offer interview/brainstorm phrasings as options when available; otherwise free text.
 6. **Ask the NOT-reference** — one `AskUserQuestion`: «Which concept does `<term>` get confused with, so a future reader doesn't mix them up?». No plausible homonym → `None`.
 7. **Compose one line.** `- <term> — <one-sentence definition>. NOT <confused concept + how it differs>.` — or, when step 6 = None, `- <term> — <definition>.`

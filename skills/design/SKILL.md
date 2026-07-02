@@ -5,15 +5,15 @@ effort: high
 agents: [explorer, critic]
 description: >
   Use to produce a Software Architecture Document for a feature — Arc42 12 sections + C4 L1/L2
-  inline + ADRs spawned on a blast-radius gate — once spec.md and CONTEXT.md exist. Triggers on
+  inline + ADRs spawned on a blast-radius gate — once spec.md exists. Triggers on
   "design {slug}", "architecture for {slug}", "SAD for {slug}", "arc42 for {slug}",
   "C4 context+container for {slug}", "/sdd:design {slug}", "спроектуй архітектуру {slug}",
   "SAD для {slug}", "архітектурний документ {slug}". Drafts §1–§12 in-memory, batch-validates each
   section Socratically (4-state machine), spawns an ADR only when a decision crosses the
   blast-radius threshold (irreversible / multi-module / has legitimate alternatives), writes each
   resolved section + its ADRs atomically, then runs a clean-context critic before finalizing.
-  Brownfield: dispatches an Explore subagent to map the repo first. Hard-refuse if spec.md or
-  CONTEXT.md is missing.
+  Brownfield: dispatches an Explore subagent to map the repo first. Hard-refuse if spec.md
+  is missing; CONTEXT.md is optional (when present its Glossary is canonical).
 ---
 
 # Skill: design
@@ -32,15 +32,16 @@ Architect / Tech Lead (drives everything). PM is consulted only on §10 Quality 
 ## Inputs
 
 - `<slug>` — same feature slug used by every earlier stage.
-- **Gate (hard-refuse if missing):** `docs/features/<slug>/spec.md` AND `docs/features/<slug>/CONTEXT.md`. If either is absent → STOP and point: «run `specify <slug>` / `glossary <slug>` first — design reads the spec's goals/NFRs and the glossary's roles as canonical».
+- **Gate (hard-refuse if missing):** `docs/features/<slug>/spec.md`. If absent → STOP and point: «run `specify <slug>` first — design reads the spec's goals/NFRs as canonical».
+- (Optional) `CONTEXT.md` — repo-root and/or `docs/features/<slug>/` → [`../glossary/SKILL.md`](../glossary/SKILL.md). When present, its `## Glossary` is canonical for roles + domain terms (per-feature wins over root on conflict); when absent, the spec's §4 roles are canonical and the handoff recommends `/sdd:glossary <slug>` before terms drift.
 - (Optional) `docs/features/<slug>/.size` — depth hint (MVP vs Full + expected ADR count per the size matrix). Absent → default to M (full set) **and say so loudly in the handoff** — «size M (default — no `.size`; run `/sdd:classify-size <slug>`)».
 - A git repo — so the Step-3 Explore subagent can read code on a brownfield.
 - Skip if `sad.md` already has all 12 sections filled AND `adr/` has ≥1 file — suggest review instead.
 
 ## Protocol
 
-1. **Gate + size + set interview depth.** `test -f docs/features/<slug>/spec.md && test -f docs/features/<slug>/CONTEXT.md` → either missing = refuse with the pointer above. Read `.size` if present (shapes ADR count + §6 flow count — see the size matrix). **Then set the interview depth (the opening question):** read `interview_depth` from `.claude/sdd.local.md` if present (else default medium), and — unless a `--depth=easy|medium|hard` arg was passed — ask ONE depth-selection `AskUserQuestion` phrased per [`../_shared/ask-style.md`](../_shared/ask-style.md), with the saved/medium value as the «(Recommended)» first option. The level governs the step-6 per-section question volume (easy: decide convention-defaults itself + ledger, ask only blast-radius decisions; medium: walk every real decision; hard: walk every decision, foreground each trade-off) and the C4 diagram confirmation → [`../_shared/interview-depth.md`](../_shared/interview-depth.md). (The blast-radius → ADR gate and the §11 owner+due rule are floors — enforced at every depth.)
-2. **Read upstream.** `spec.md` (§2 Goals, §3 Non-goals, §6 NFR with numeric targets + measurement, §6.1 Security/privacy + abuse cases, §7 KPIs, §8 Open questions, any §1 ¶4 «Decision override» bullets); `CONTEXT.md` `## Glossary` (canonical roles + domain terms — wins over anything that contradicts).
+1. **Gate + size + set interview depth.** `test -f docs/features/<slug>/spec.md` → missing = refuse with the pointer above. Read `.size` if present (shapes ADR count + §6 flow count — see the size matrix). **Then set the interview depth (the opening question):** read `interview_depth` from `.claude/sdd.local.md` if present (else default medium), and — unless a `--depth=easy|medium|hard` arg was passed — ask ONE depth-selection `AskUserQuestion` phrased per [`../_shared/ask-style.md`](../_shared/ask-style.md), with the saved/medium value as the «(Recommended)» first option. The level governs the step-6 per-section question volume (easy: decide convention-defaults itself + ledger, ask only blast-radius decisions; medium: walk every real decision; hard: walk every decision, foreground each trade-off) and the C4 diagram confirmation → [`../_shared/interview-depth.md`](../_shared/interview-depth.md). (The blast-radius → ADR gate and the §11 owner+due rule are floors — enforced at every depth.)
+2. **Read upstream.** `spec.md` (§2 Goals, §3 Non-goals, §6 NFR with numeric targets + measurement, §6.1 Security/privacy + abuse cases, §7 KPIs, §8 Open questions, any §1 ¶4 «Decision override» bullets); `CONTEXT.md` `## Glossary` when present — read **both** repo-root (project-wide) and `docs/features/<slug>/CONTEXT.md` (feature-scoped); per-feature wins on conflict; canonical roles + domain terms win over anything that contradicts. Neither file exists → the spec's §4 roles are canonical; recommend `/sdd:glossary <slug>` in the handoff.
 3. **Current architecture — read the map, don't re-scan.** Prefer `docs/architecture-map.md` (produced by `survey`): if it exists and is fresh (its `reflects_commit` ≈ current HEAD), read it — that IS the brownfield context (module layout, layering, datastores, conventions, the C4 of what exists). Re-scan only if the map is **absent or stale**: dispatch the [`explorer`](../../agents/explorer.md) agent — `subagent_type: "sdd:explorer"` (`model: haiku` + `effort: low`, clean-isolated per [`../_shared/agent-roster.md`](../_shared/agent-roster.md)) — for «module layout, layering/ports conventions, datastores, inter-module comms, anything that constrains `<slug>`», and suggest the user run `survey` to persist it. Greenfield (no source + no map) → note `<!-- brownfield: N/A — greenfield repo -->` in §3. (Fallback to a `subagent_type: "Explore"` Agent if `explorer` unavailable.)
 4. **Bootstrap + read template.** Copy [`./templates/sad.md`](./templates/sad.md) → `docs/features/<slug>/sad.md`; patch frontmatter (`updated_at`, `feature_size` from `.size`; leave `target_surfaces: []` empty — it's filled when §4's Target-surface decision resolves in step 6). Commit `design: <slug> bootstrap sad.md`. Read the template's `<!-- … -->` comments (the per-section contract) + [`./templates/adr.md`](./templates/adr.md) (MADR shape). This is the only file write between Step 4 and Step 6 — Step 5 drafts in-memory.
 5. **Per-section draft (in-memory).** For each §1 → §12, draft proposed content + the decisions it contains, bundling trivial convention defaults into one question. Per-section sourcing, item-banks, the question budget, and pre-Socratic hygiene → [`./references/draft-generation.md`](./references/draft-generation.md). Do NOT write `sad.md` here.
@@ -50,12 +51,12 @@ Architect / Tech Lead (drives everything). PM is consulted only on §10 Quality 
 ## Definition of Done
 
 - `docs/features/<slug>/sad.md` exists with all 12 Arc42 sections filled OR marked `<!-- N/A: <reason> -->`.
-- §3 has a real `C4Context` block and §5 a real `C4Container` block — real names from CONTEXT + the scan, no `<placeholder>` stubs, no `Container_Bondary` typos. §6 has ≥1 `sequenceDiagram` (the `sequences` stage then covers every critical flow / §5 AC — no cap).
+- §3 has a real `C4Context` block and §5 a real `C4Container` block — real names from the glossary/spec + the scan, no `<placeholder>` stubs, no `Container_Bondary` typos. §6 has ≥1 `sequenceDiagram` (the `sequences` stage then covers every critical flow / §5 AC — no cap).
 - Frontmatter `target_surfaces: [...]` is non-empty (the Target-surface decision was made in §4) and §5 draws **one C4 container per declared surface**; each declared UI surface (`web-frontend` / `mobile-app` / `desktop-app`) carries a UI-architecture decision — an ADR, or an inline §4 note if it didn't cross the gate. → [`../_shared/surfaces.md`](../_shared/surfaces.md).
 - §9 ADR table is closed against `adr/` (every file has a row, every row a file). 2–4 ADRs for XS/S, 5–12 for M, 10–15 for L/XL; every ADR Status = `Accepted`, title in decision-form (`0003-sliding-window-counter.md` ✓ vs `0003-rate-limiting.md` ✗), no strawman options.
 - §10 scenarios are testable (When / Then / How-verify) and cite spec §6 NFR numbers verbatim (no inventing, no rounding).
 - §11 carries a row for every `save_as_oq` decision with both owner AND due (severity literal `Open question`); never N/A.
-- §1 Stakeholders + §3 actors match the CONTEXT glossary exactly (no invented `user`/`admin`).
+- §1 Stakeholders + §3 actors match the glossary exactly when a `CONTEXT.md` exists (per-feature wins over root), else the spec's §4 roles (no invented `user`/`admin`).
 - Step-3 Explore ran on a brownfield (or §3 has the greenfield note). Edits-log maintained. The critic ran on the post-Socratic SAD; every finding resolved or overridden.
 
 ## Anti-patterns

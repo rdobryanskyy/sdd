@@ -22,6 +22,8 @@ of the pipeline: later skills read `.size` to decide MVP vs Full output depth.
 
 This skill is the **canonical owner of the size matrix** → [`../_shared/size-matrix.md`](../_shared/size-matrix.md). The classification rules, the MVP-vs-Full table, and the one-sentence rule all live there; this skill only runs the dialogue and writes the file.
 
+**Called inline by `specify`.** When `.size` is absent at the start of the backbone, `specify` step 1 runs this protocol inline (same signals, same file, folded into one bundled question) — this skill stays the standalone utility for classifying up front or **re-classifying when scope changes**; the protocol is never duplicated elsewhere.
+
 ## Owner
 
 PM or Tech Lead (driver of the intake phase). An architect may escalate S → M on spotting a new subsystem.

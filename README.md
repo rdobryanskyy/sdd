@@ -1,7 +1,7 @@
 # SDD — Spec-Driven Development for Claude Code
 
 A self-contained Claude Code plugin that carries a feature from a one-line idea to
-**reviewed, verified, shipped** code through **18 atomic, stack-agnostic skills** and a
+**reviewed, verified, shipped** code through **19 atomic, stack-agnostic skills** and a
 **TDD implementation engine** — with a living roadmap above the per-feature flow.
 
 Every skill is Socratic (it walks decisions with you, it doesn't dump a wall of output),
@@ -132,6 +132,7 @@ flowchart LR
         ADR[decide-adr]
         FX[fix]
     end
+    CL -.-> GL -.-> D
     SH --> done([shipped: PR + changelog])
 ```
 
@@ -147,7 +148,7 @@ flowchart LR
 |---|---|---|---|
 | 1 | **specify** | Interviews you to capture the idea, writes the product spec + acceptance criteria (reads the architecture map for constraints) | *your idea*, `architecture-map.md` → `spec.md` |
 | 2 | **clarify** | Sweeps the spec for ambiguities (a devil's-advocate pass), closes or defers each | `spec.md` → tightened `spec.md` |
-| 3 | **design** | **Matches the feature to your existing architecture** (see below) + **declares the target surfaces**, writes the Arc42 SAD + C4 + ADRs | `spec.md`, `CONTEXT.md` → `sad.md`, `adr/*` |
+| 3 | **design** | **Matches the feature to your existing architecture** (see below) + **declares the target surfaces**, writes the Arc42 SAD + C4 + ADRs | `spec.md` (+ `CONTEXT.md` if present) → `sad.md`, `adr/*` |
 | 4 | **sequences** | Draws the runtime flows as Mermaid sequence diagrams | `sad.md` → `sad.md §6` |
 | 5 | **data-model** | Designs the schema and writes the actual forward+rollback migrations — **staged** under the feature folder, not the live tree (`implement` promotes them) | `spec.md`, `sad.md`, sequences → `data-model.md`, staged `migrations/*.up/down.sql` |
 | 6 | **api** | Derives the OpenAPI contract from the data model + sequences + spec | `data-model.md`, sequences, `spec.md` → `contracts/openapi.yaml` |
@@ -447,7 +448,7 @@ skipped. The ones you're most likely to meet:
 
 | Refusal | What it means | What to do |
 |---|---|---|
-| `design`: «run `specify` / `glossary` first» | there's no `spec.md` or `CONTEXT.md` for this slug yet (or the slug is spelled differently) | run `/sdd:specify <slug>`; check the slug matches the folder under `docs/features/` |
+| `design`: «run `specify` first» | there's no `spec.md` for this slug yet (or the slug is spelled differently) | run `/sdd:specify <slug>`; check the slug matches the folder under `docs/features/` |
 | `api`: «run `data-model` first» | the contract is derived from the data model's entities — it can't be invented field-by-field | run `/sdd:data-model <slug>` |
 | `tasks`: «no Accepted ADR» | `design` spawned no ADR (rare — usually a sign the SAD walk was cut short) | run `/sdd:decide-adr <slug>` for the key decision, or re-run `/sdd:design <slug>` |
 

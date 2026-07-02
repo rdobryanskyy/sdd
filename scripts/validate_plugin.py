@@ -167,12 +167,16 @@ def main() -> int:
             v = v[1:-1]
         return [x.strip() for x in v.split(",") if x.strip()]
 
-    def check_profile(label: str, fm: dict, require: bool):
+    def check_profile(label: str, fm: dict, require: bool, require_agents: bool = False):
         """Validate model/effort/agents attributes if present (required on skills)."""
         m, e = fm.get("model"), fm.get("effort")
         if require:
             check(m is not None, f"{label} declares model", f"{label} is missing the model attribute")
             check(e is not None, f"{label} declares effort", f"{label} is missing the effort attribute")
+        if require_agents:
+            check(fm.get("agents") is not None,
+                  f"{label} declares agents",
+                  f"{label} is missing the agents attribute (use `agents: []` when it spawns none)")
         if m is not None:
             check(m in VALID_MODELS or "-" in m or "." in m,
                   f"{label} model {m!r} is valid", f"{label} model {m!r} not in {sorted(VALID_MODELS)} or a full id")
@@ -200,7 +204,7 @@ def main() -> int:
         check(len(fm.get("description", "")) >= 30 or "description" in _block_keys(skill_md),
               f"skill '{base}' has a description",
               f"skill '{base}' has no/short description")
-        check_profile(f"skill '{base}'", fm, require=True)
+        check_profile(f"skill '{base}'", fm, require=True, require_agents=True)
     check((skills_dir / "_shared").is_dir() and not (skills_dir / "_shared" / "SKILL.md").exists(),
           "_shared is reference-only (no SKILL.md)",
           "_shared is missing or contains a SKILL.md")
@@ -221,6 +225,20 @@ def main() -> int:
     skill_glob = sorted((ROOT / "skills").rglob("*.md"))
     skill_specs = sorted((ROOT / "skills").glob("*/SKILL.md"))
     doc_pool = skill_glob + sorted((ROOT / "agents").glob("*.md"))
+
+    # --- skill count in prose: README + the 4 manifests state the REAL skill count ---
+    # The "N atomic" phrase is marketing prose that silently rots when a skill is added;
+    # every file that carries it must agree with the actual number of skills/*/SKILL.md.
+    print("== skill count in prose ==")
+    n_skills = len(skill_specs)
+    ATOMIC_RE = re.compile(r"\b(\d+) atomic")
+    for rel in ("README.md", ".claude-plugin/plugin.json", ".claude-plugin/marketplace.json",
+                ".codex-plugin/plugin.json", ".cursor-plugin/plugin.json"):
+        counts = ATOMIC_RE.findall((ROOT / rel).read_text())
+        check(bool(counts) and all(int(c) == n_skills for c in counts),
+              f"{rel} states the real skill count ({n_skills} atomic)",
+              f"{rel} must say '{n_skills} atomic …' to match the {n_skills} skills/*/SKILL.md "
+              f"(found: {counts if counts else 'no `N atomic` phrase'})")
 
     # --- markdown relative links resolve (replaces the per-change manual link sweep) ---
     # Only *.md / dir targets are resolved (the doc cross-references). Skipped: http(s), #anchors,

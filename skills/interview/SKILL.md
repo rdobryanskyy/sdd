@@ -2,7 +2,7 @@
 name: interview
 model: opus
 effort: high
-allowed-tools: AskUserQuestion
+agents: []
 description: >
   Use BEFORE specify to stress-test a raw idea — pressure-test it before you commit to a
   spec. A Socratic interview that surfaces hidden assumptions, names tradeoffs, exposes
@@ -35,14 +35,10 @@ The depth dial and the Socratic posture are SDD-wide:
 
 ## Depth dial — set this first
 
-One `AskUserQuestion`, then commit (**default medium**). Depth governs question volume and how
-much you decide for the user:
-
-| Depth | Questions | Posture |
-| --- | --- | --- |
-| **easy** | 3-4 | Decide-for-you. One pass on intent, one sharp tradeoff, one angle. |
-| **medium** *(default)* | 6-10 | Balanced. Full three phases. |
-| **hard** | 10-15 | Interrogate-me. Drill every assumption, run more probing frames. |
+One `AskUserQuestion`, then commit (**default medium**). The dial is SDD-wide; interview's
+delta — the **3–4 / 6–10 / 10–15** question budget per level and each level's posture — is the
+canonical `interview` row in [`../_shared/interview-depth.md`](../_shared/interview-depth.md)
+(no table duplicated here).
 
 The adversarial triggers (grill / rip apart / розʼєби / погрилити) imply **hard** unless the
 user says otherwise. State the depth in one line, then start.

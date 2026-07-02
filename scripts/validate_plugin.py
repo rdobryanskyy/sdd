@@ -340,6 +340,25 @@ def main() -> int:
                + ", ".join(dups)) if dups
               else f"taxonomy row `{row} …` is missing from _shared/surfaces.md (did it move/rename?)")
 
+    # --- the route table is single-source in _shared/size-matrix.md + `.route` is threaded ---
+    # The Routes table (quick/standard/full handoff behaviour) lives ONLY in size-matrix.md;
+    # and the `.route` artifact must be named by the files that write/consume it — a rename or
+    # a dropped mention silently reverts the pipeline to always-standard.
+    print("== routes ==")
+    size_matrix_text = (ROOT / "skills" / "_shared" / "size-matrix.md").read_text()
+    ROUTE_HEADER = "| Route | Handoff behaviour at an optional stage |"
+    route_dups = [str(s.relative_to(ROOT)) for s in skill_specs if ROUTE_HEADER in s.read_text()]
+    check(ROUTE_HEADER in size_matrix_text and not route_dups,
+          "route table is single-source in _shared/size-matrix.md",
+          (f"route table header is duplicated in a SKILL.md (must live only in _shared/size-matrix.md): "
+           + ", ".join(route_dups)) if route_dups
+          else "route table header is missing from _shared/size-matrix.md (did it move/rename?)")
+    for rel in ("skills/_shared/size-matrix.md", "skills/_shared/handoff.md",
+                "skills/classify-size/SKILL.md", "skills/specify/SKILL.md"):
+        check('.route' in (ROOT / rel).read_text(),
+              f"{rel} mentions the .route artifact",
+              f"{rel} never mentions '.route' — it writes or resolves the route and must name the artifact")
+
     # --- no orphan in _shared/: every shared reference is pointed to by >=1 file ---
     print("== _shared no-orphan ==")
     for sf in sorted((ROOT / "skills" / "_shared").glob("*.md")):

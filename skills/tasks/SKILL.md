@@ -45,7 +45,7 @@ Tech Lead.
 10. **Emit `tasks.json`** (step contract below) — the same model the markdown reflects, in machine form, at `docs/features/<slug>/tasks.json`.
 11. **Optional tracker export.** If an issue-tracker MCP is connected (Jira / Linear / GitHub Issues / Redmine — whichever the repo uses), offer to create tickets from `_epic.md` + the task files. Otherwise provide copy-paste-ready bodies. Never hard-bind to one tracker.
 12. **Self-check.** Every task ≤1 day; DAG acyclic with ≥1 parallel branch where the work allows; DoD per task; `acs` cover every spec §5 AC; `tasks.json` validates against the contract.
-13. **Propose commit + handoff.** `tasks: <slug> (breakdown + tasks.json)`. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) — *What I did* + *Review* (`tasks/`, `tasks.json`) + *Run next* (`/clear`, then `/sdd:plan-tests <slug>`, then `/sdd:implement <slug>`).
+13. **Propose commit + handoff.** `tasks: <slug> (breakdown + tasks.json)`. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) — *What I did* + *Review* (`tasks/`, `tasks.json`) + *Run next* — **resolve the next stage per `.route`** (the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)): forward `/sdd:plan-tests <slug>` (on `quick` it always collapses to the inline `## Test plan` in `spec.md`), then `/sdd:implement <slug>`; `plan-tests`' N/A condition = **every task's DoD already names its test** — only then skip target `/sdd:implement <slug>` directly (auto-skip on `quick`, offered `↳ or` on `standard`, never on `full`).
 
 ## `tasks.json` contract (read by `implement`)
 

@@ -417,20 +417,30 @@ Three notes on the first run:
   [Interview depth](#interview-depth-easy--medium--hard)).
 - Artifacts land in `docs/features/<slug>/`.
 
-### Fast path (XS)
+### Routes — quick / standard / full
 
-A small feature doesn't need the full backbone. For XS/S the optional stages are skipped **when
-their work doesn't exist** — and the decision is made for you at each handoff: the stage's *Run
-next* shows the skip as a `↳ or …` alternative (based on `.size` + the stage's N/A condition),
-and you pick it. Example — a config-toggle-sized feature in one session:
+A small feature doesn't need the full backbone — and it shouldn't need a confirmation at every
+stage either. Alongside `.size`, classification writes a **route** to
+`docs/features/<slug>/.route` (one word: `quick` / `standard` / `full`; defaults **XS/S → quick,
+M → standard, L/XL → full**, confirmed together with the size in the **same single question** —
+you can always pick a different route). The route decides how each handoff treats the optional
+stages (`clarify`, `sequences`, `data-model`, `api`, `plan-tests`):
+
+- **`quick`** — the stage checks the skip condition **itself**: if the stage's work doesn't exist,
+  it's **auto-skipped with the reason stated** («auto-skipped clarify: zero open questions»), and
+  the `↳ or …` line inverts to offer the full path instead. If the work *does* exist, the stage runs.
+- **`standard`** — today's behaviour: the handoff **offers** the skip as `↳ or …` and you pick.
+- **`full`** — every optional stage runs; no skip alternatives are printed.
+
+Example — a config-toggle-sized feature (`quick` route) in one session:
 
 ```text
-/sdd:specify  rate-limit-bump --depth=easy   # spec came out with zero open questions →
-                                             #   handoff offers: ↳ or /sdd:design (skip clarify)
+/sdd:specify  rate-limit-bump --depth=easy   # size XS + route quick confirmed in one question →
+                                             #   zero open questions → auto-skips clarify (says why)
 /sdd:design   rate-limit-bump                # one actor, no multi-step flow, no schema change →
-                                             #   handoff offers: ↳ or /sdd:api — or straight to tasks
+                                             #   auto-skips sequences + data-model → next: api or tasks
 /sdd:tasks    rate-limit-bump                # never skipped: implement consumes tasks.json
-/sdd:implement rate-limit-bump               # test plan lives inline in spec.md for XS/S
+/sdd:implement rate-limit-bump               # test plan lives inline in spec.md on quick
 /sdd:review   rate-limit-bump
 /sdd:ship     rate-limit-bump
 ```
@@ -438,7 +448,10 @@ and you pick it. Example — a config-toggle-sized feature in one session:
 The skip conditions (`clarify` — zero open questions; `sequences` — no multi-step flow;
 `data-model` — no schema change; `api` — no contract change; `plan-tests` — inline in the spec)
 are canonical in [`skills/_shared/size-matrix.md`](./skills/_shared/size-matrix.md) — they're
-**N/A conditions, not size defaults**: an XS feature *with* a migration still runs `data-model`.
+**N/A conditions, not size defaults**: an XS feature *with* a migration still runs `data-model`,
+on every route. The route steers handoffs only, it never locks a door: re-run
+`/sdd:classify-size <slug>` to switch routes mid-flight, or just invoke a skipped stage directly —
+it always runs.
 
 ### When a stage refuses
 

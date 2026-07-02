@@ -452,9 +452,10 @@ def main() -> int:
             check(False, "", f"server/package.json is not valid JSON: {exc}")
 
     # dashboard/ UI + vendored render libs (vendored, not CDN — offline reliability).
+    # mermaid stays vendored but is lazy-loaded by app.js (only when a ```mermaid
+    # block is actually rendered); redoc was dropped with the read-only dashboard.
     for rel in ("dashboard/index.html", "dashboard/app.js", "dashboard/style.css",
-                "dashboard/vendor/marked.min.js", "dashboard/vendor/mermaid.min.js",
-                "dashboard/vendor/redoc.standalone.js"):
+                "dashboard/vendor/marked.min.js", "dashboard/vendor/mermaid.min.js"):
         check((ROOT / rel).exists(), f"{rel} exists", f"{rel} is missing")
 
     # The `start` skill — the documented handshake (auto-discovered as a skill above, but

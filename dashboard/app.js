@@ -1,5 +1,7 @@
-/* SDD dashboard — vanilla JS. Mirrors docs/features/ and drives the pipeline
-   back into the live Claude session over the MCP channel. */
+/* SDD dashboard — vanilla JS, READ-ONLY over docs/features/. It renders the
+   pipeline + artifacts off disk and drives the pipeline back into the live
+   Claude session (validated /sdd: commands). All edits happen through the
+   pipeline in the terminal — the dashboard never writes artifact text. */
 'use strict';
 
 const qs = new URLSearchParams(location.search);
@@ -10,9 +12,8 @@ const state = {
   features: [],
   slug: null,
   detail: null,
-  artifact: null, // {path, kind, raw, mtime}
-  editing: false,
-  pendingRun: null, // {slug, stage, timer}
+  artifact: null, // {path, kind, label, raw, mtime}
+  pendingRun: null, // {slug, command}
 };
 
 // ---- api -------------------------------------------------------------------
@@ -44,19 +45,13 @@ async function apiJson(path, opts) {
 
 const consoleLog = () => document.getElementById('console-log');
 
-function logLine(kind, text, who) {
+function logLine(kind, text) {
   const el = document.createElement('div');
   el.className = `log-line ${kind}`;
   const ts = document.createElement('span');
   ts.className = 'ts';
   ts.textContent = new Date().toLocaleTimeString();
   el.appendChild(ts);
-  if (who) {
-    const w = document.createElement('span');
-    w.className = 'who';
-    w.textContent = who + ':';
-    el.appendChild(w);
-  }
   const body = document.createElement('span');
   body.textContent = text;
   el.appendChild(body);
@@ -104,10 +99,6 @@ function onFrame(f) {
       logLine(f.level || 'info', f.message + (f.slug ? `  ·${f.slug}` : ''));
       markRunning(f.slug);
       break;
-    case 'chat':
-      logLine('chat', f.text, f.role === 'claude' ? 'claude' : 'you');
-      markRunning(f.slug);
-      break;
     case 'command':
       logLine('command', `→ queued ${f.command}`);
       break;
@@ -118,10 +109,7 @@ function onFrame(f) {
     case 'done':
       logLine('done', `✓ ${f.stage} done — ${f.summary}${f.verdict ? ' [' + f.verdict + ']' : ''}`);
       if (f.next_command) logLine('system', `next: ${f.next_command}`);
-      finishRun(f.slug, f.verdict);
-      break;
-    case 'artifact_saved':
-      if (f.origin && f.origin !== 'dashboard') logLine('system', `artifact changed on disk: ${f.path}`);
+      finishRun(f.verdict);
       break;
     case 'refresh':
       refresh(f.slug);
@@ -129,23 +117,13 @@ function onFrame(f) {
   }
 }
 
-// ---- run lifecycle ---------------------------------------------------------
+// ---- run lifecycle (queued → running → done status line) --------------------
 
-function setBanner(cls, text) {
-  const b = document.getElementById('run-banner');
-  b.className = 'run-banner ' + cls;
-  b.textContent = text;
-  b.classList.remove('hidden');
-}
-function hideBanner() { document.getElementById('run-banner').classList.add('hidden'); }
-
-function startRun(slug, stage, command) {
-  if (state.pendingRun && state.pendingRun.timer) clearTimeout(state.pendingRun.timer);
-  const timer = setTimeout(() => {
-    setBanner('waiting', `Queued: ${command} — Claude consumes this only while idle at the prompt. It may be busy or waiting on a question in your terminal.`);
-  }, 6000);
-  state.pendingRun = { slug, stage, command, timer, running: false };
-  setBanner('queued', `Queued: ${command} — Claude runs it when idle at the prompt.`);
+function setRunStatus(phase, text) {
+  const el = document.getElementById('run-status');
+  if (!phase) { el.classList.add('hidden'); return; }
+  el.className = 'run-status ' + phase;
+  el.textContent = text;
 }
 
 function markRunning(slug) {
@@ -153,16 +131,13 @@ function markRunning(slug) {
   if (!p || p.running) return;
   if (slug && p.slug && slug !== p.slug) return;
   p.running = true;
-  if (p.timer) clearTimeout(p.timer);
-  setBanner('running', `Running ${p.command} in the session…`);
+  setRunStatus('running', `running ${p.command} in the session…`);
 }
 
-function finishRun(slug, verdict) {
-  const p = state.pendingRun;
-  if (p && p.timer) clearTimeout(p.timer);
-  setBanner('done', `Stage finished${verdict ? ' — ' + verdict : ''}.`);
+function finishRun(verdict) {
+  if (!state.pendingRun) return;
+  setRunStatus('done', `done${verdict ? ' — ' + verdict : ''}`);
   state.pendingRun = null;
-  setTimeout(hideBanner, 6000);
 }
 
 async function runCommand(slug, command) {
@@ -170,7 +145,8 @@ async function runCommand(slug, command) {
     const res = await api('/api/command', { method: 'POST', body: JSON.stringify({ slug, command }) });
     const data = await res.json();
     if (!res.ok) { logLine('error', `command rejected: ${data.error || res.status}`); return; }
-    startRun(slug, command, data.command);
+    state.pendingRun = { slug, command: data.command, running: false };
+    setRunStatus('queued', `queued: ${data.command} — Claude consumes it when idle at the prompt`);
   } catch (e) {
     logLine('error', `command failed: ${e.message}`);
   }
@@ -242,11 +218,10 @@ function renderFeatureList() {
 async function selectFeature(slug) {
   state.slug = slug;
   state.artifact = null;
-  state.editing = false;
   renderFeatureList();
   document.getElementById('empty-state').classList.add('hidden');
   document.getElementById('feature-view').classList.remove('hidden');
-  hideBanner();
+  setRunStatus(null);
   await loadDetail(slug);
 }
 
@@ -320,7 +295,7 @@ function nextStage(d) {
   return d.stages.find((s) => s.status === 'pending') || d.stages.find((s) => s.status === 'blocked');
 }
 
-// ---- artifacts -------------------------------------------------------------
+// ---- artifacts (read-only render) -------------------------------------------
 
 function renderArtifactTabs(d) {
   const tabs = document.getElementById('artifact-tabs');
@@ -345,7 +320,6 @@ function renderArtifactTabs(d) {
 }
 
 async function openArtifact(a) {
-  state.editing = false;
   try {
     const res = await api(`/api/artifact?slug=${encodeURIComponent(state.slug)}&path=${encodeURIComponent(a.path)}`);
     if (!res.ok) throw new Error(res.status);
@@ -366,22 +340,7 @@ function renderArtifact() {
   toolbar.classList.remove('hidden');
   document.getElementById('artifact-path').textContent = a.path;
 
-  const editable = a.kind !== 'openapi';
-  document.getElementById('edit-btn').classList.toggle('hidden', !editable || state.editing);
-  document.getElementById('save-btn').classList.toggle('hidden', !state.editing);
-  document.getElementById('cancel-btn').classList.toggle('hidden', !state.editing);
-
   viewer.innerHTML = '';
-  if (state.editing) {
-    const ta = document.createElement('textarea');
-    ta.className = 'editor';
-    ta.value = a.raw;
-    ta.id = 'editor';
-    viewer.appendChild(ta);
-    return;
-  }
-
-  if (a.kind === 'openapi') return renderOpenApi(a, viewer);
   if (a.kind === 'json') {
     const pre = document.createElement('pre');
     pre.className = 'raw';
@@ -389,7 +348,8 @@ function renderArtifact() {
     viewer.appendChild(pre);
     return;
   }
-  if (a.kind === 'text') {
+  if (a.kind === 'text' || a.kind === 'openapi') {
+    // openapi renders as plain yaml — no in-browser API console
     const pre = document.createElement('pre');
     pre.className = 'raw';
     pre.textContent = a.raw;
@@ -403,7 +363,7 @@ function renderArtifact() {
 function stripFrontmatter(md) {
   // A leading --- … --- YAML block renders as a setext h2 under marked
   // (text + a line of --- = heading). The frontmatter is already shown as
-  // badges, so drop it before rendering. Keep a one-line note that it exists.
+  // badges, so drop it before rendering.
   if (!md.startsWith('---')) return md;
   const end = md.indexOf('\n---', 3);
   if (end === -1) return md;
@@ -423,9 +383,25 @@ function renderMarkdown(md, viewer) {
   renderMermaidIn(div);
 }
 
+// Mermaid is 3.3 MB — load it only when a rendered artifact actually contains a
+// ```mermaid block (same lazy pattern the OpenAPI renderer used to follow).
+let mermaidLoading = null;
+function loadMermaid() {
+  if (window.mermaid) return Promise.resolve();
+  if (mermaidLoading) return mermaidLoading;
+  mermaidLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = '/vendor/mermaid.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => { mermaidLoading = null; reject(new Error('failed to load mermaid')); };
+    document.head.appendChild(s);
+  });
+  return mermaidLoading;
+}
+
 let mermaidReady = false;
-function ensureMermaid() {
-  if (mermaidReady || !window.mermaid) return mermaidReady;
+function initMermaid() {
+  if (mermaidReady) return;
   window.mermaid.initialize({
     startOnLoad: false,
     theme: 'dark',
@@ -433,12 +409,18 @@ function ensureMermaid() {
     securityLevel: 'strict',
   });
   mermaidReady = true;
-  return true;
 }
 
 async function renderMermaidIn(root) {
-  if (!ensureMermaid()) return;
   const blocks = root.querySelectorAll('code.language-mermaid');
+  if (blocks.length === 0) return; // markdown-only artifact — never load the lib
+  try {
+    await loadMermaid();
+  } catch (e) {
+    logLine('error', e.message);
+    return;
+  }
+  initMermaid();
   let i = 0;
   for (const code of blocks) {
     const src = code.textContent;
@@ -457,94 +439,14 @@ async function renderMermaidIn(root) {
   }
 }
 
-let redocLoaded = false;
-function loadRedoc() {
-  return new Promise((resolve, reject) => {
-    if (redocLoaded && window.Redoc) return resolve();
-    const s = document.createElement('script');
-    s.src = '/vendor/redoc.standalone.js';
-    s.onload = () => { redocLoaded = true; resolve(); };
-    s.onerror = () => reject(new Error('failed to load redoc'));
-    document.head.appendChild(s);
-  });
-}
-
-async function renderOpenApi(a, viewer) {
-  const host = document.createElement('div');
-  host.className = 'redoc-host';
-  viewer.appendChild(host);
-  try {
-    await loadRedoc();
-    const specUrl = withToken(`/api/artifact?slug=${encodeURIComponent(state.slug)}&path=${encodeURIComponent(a.path)}`);
-    window.Redoc.init(specUrl, { hideDownloadButton: true, theme: { spacing: { sectionVertical: 8 } } }, host);
-  } catch (e) {
-    host.className = 'mermaid-error';
-    host.textContent = 'OpenAPI render error: ' + e.message;
-  }
-}
-
-// ---- editing ---------------------------------------------------------------
-
-function beginEdit() {
-  if (state.pendingRun) {
-    if (!confirm('A stage is running in the session. Editing now risks a conflict. Edit anyway?')) return;
-  }
-  state.editing = true;
-  renderArtifact();
-}
-
-function cancelEdit() {
-  state.editing = false;
-  renderArtifact();
-}
-
-async function saveEdit() {
-  const ta = document.getElementById('editor');
-  if (!ta) return;
-  const content = ta.value;
-  try {
-    const res = await api(`/api/feature/${encodeURIComponent(state.slug)}/artifact`, {
-      method: 'PUT',
-      body: JSON.stringify({ path: state.artifact.path, content, mtime: state.artifact.mtime }),
-    });
-    if (res.status === 409) {
-      const showConflict = () => {
-        const v = document.getElementById('artifact-viewer');
-        const c = document.createElement('div');
-        c.className = 'conflict';
-        c.textContent = 'Conflict: this file changed on disk since you opened it. Reload to get the latest, then re-apply your edit.';
-        const reload = document.createElement('button');
-        reload.className = 'ghost small';
-        reload.textContent = 'reload latest';
-        reload.onclick = () => openArtifact({ path: state.artifact.path, kind: state.artifact.kind, label: state.artifact.label });
-        c.appendChild(document.createTextNode('  '));
-        c.appendChild(reload);
-        v.prepend(c);
-      };
-      showConflict();
-      logLine('warn', `save conflict on ${state.artifact.path} (stale mtime → 409)`);
-      return;
-    }
-    if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || res.status); }
-    const data = await res.json();
-    state.artifact.raw = content;
-    state.artifact.mtime = data.mtime;
-    state.editing = false;
-    renderArtifact();
-    logLine('info', `saved ${state.artifact.path}`);
-  } catch (e) {
-    logLine('error', `save failed: ${e.message}`);
-  }
-}
-
 // ---- refresh ---------------------------------------------------------------
 
 async function refresh(slug) {
   await loadFeatures();
   if (state.slug && (!slug || slug === state.slug)) {
     await loadDetail(state.slug);
-    // keep the open artifact in sync if Claude rewrote it (and we're not editing)
-    if (state.artifact && !state.editing) {
+    // keep the open artifact in sync if Claude rewrote it
+    if (state.artifact) {
       const still = state.detail.artifacts.find((x) => x.path === state.artifact.path);
       if (still) await openArtifact(still);
     }
@@ -625,19 +527,6 @@ async function showRoadmap() {
   }
 }
 
-// ---- chat ------------------------------------------------------------------
-
-async function sendChat(text) {
-  if (!text.trim()) return;
-  logLine('chat', text, 'you');
-  try {
-    const res = await api('/api/chat', { method: 'POST', body: JSON.stringify({ text, slug: state.slug }) });
-    if (!res.ok) { const j = await res.json().catch(() => ({})); logLine('error', `chat failed: ${j.error || res.status}`); }
-  } catch (e) {
-    logLine('error', `chat failed: ${e.message}`);
-  }
-}
-
 // ---- utils -----------------------------------------------------------------
 
 function escapeHtml(s) {
@@ -658,16 +547,7 @@ function init() {
   document.getElementById('new-feature').onclick = newFeatureDialog;
   document.getElementById('new-feature-2').onclick = newFeatureDialog;
   document.getElementById('roadmap-btn').onclick = showRoadmap;
-  document.getElementById('edit-btn').onclick = beginEdit;
-  document.getElementById('save-btn').onclick = saveEdit;
-  document.getElementById('cancel-btn').onclick = cancelEdit;
   document.getElementById('clear-console').onclick = () => { consoleLog().innerHTML = ''; };
-  document.getElementById('chat-form').onsubmit = (e) => {
-    e.preventDefault();
-    const input = document.getElementById('chat-input');
-    sendChat(input.value);
-    input.value = '';
-  };
   document.getElementById('modal').onclick = (e) => { if (e.target.id === 'modal') closeModal(); };
 
   if (!TOKEN) {

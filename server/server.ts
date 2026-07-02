@@ -111,6 +111,7 @@ process.on('uncaughtException', (err) => log(`uncaught exception: ${err}`))
 
 // ---- WS client registry + broadcast ----------------------------------------
 
+type WSData = { session: string | null }
 type WS = { send: (data: string) => void; readyState: number; data?: unknown }
 const clients = new Set<WS>()
 
@@ -127,7 +128,7 @@ function broadcast(frame: Frame): void {
 
 // ---- HTTP server (lazy bind) -----------------------------------------------
 
-let httpServer: { stop: (force?: boolean) => void; port: number } | null = null
+let httpServer: { stop: (force?: boolean) => void } | null = null
 let boundPort: number | null = null
 
 function dashboardUrl(): string {
@@ -153,7 +154,7 @@ function ensureHttp(): number {
   for (let i = 0; i < PORT_SCAN; i++) {
     const port = startPort + i
     try {
-      httpServer = Bun.serve({
+      httpServer = Bun.serve<WSData, never>({
         port,
         hostname: '127.0.0.1',
         fetch: handleHttp,
@@ -223,7 +224,10 @@ function loopbackOk(req: Request, url: URL): boolean {
   return true
 }
 
-async function handleHttp(req: Request, server: { upgrade: (r: Request, o?: unknown) => boolean }): Promise<Response | undefined> {
+async function handleHttp(
+  req: Request,
+  server: { upgrade: (r: Request, o: { data: WSData }) => boolean },
+): Promise<Response | undefined> {
   const url = new URL(req.url)
   const path = url.pathname
 

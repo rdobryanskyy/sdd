@@ -26,6 +26,7 @@ Even with worktrees, some tasks must not run concurrently:
 
 - **`layer: migration`** — migrations are an ordered sequence (e.g. golang-migrate's numbered files); run them one at a time, in order. Each migration task first **promotes** its staged `docs/features/<slug>/migrations/<NN>_*` file into the live tree (next free number, in ordinal order) before applying it — see [`./inputs.md`](./inputs.md).
 - **Overlapping `files_hint`** — two tasks that touch the same file run in the same lane (serialized), or the second rebases on the first. Compute lanes from `files_hint` intersections up front.
+- **Compile-coupled pair** — a shared-contract change + its implementer(s) share the contract file in `files_hint`, so they land in one lane by the rule above; additionally the lead gives the pair a synthetic dep (contract → implementer) and closes it with **one shared gate + one commit** carrying every task's `SDD-Task`/`SDD-AC` trailers ([`tdd-loop.md`](./tdd-loop.md) §COMMIT) — neither task is separately committable green.
 
 Tasks in different lanes with satisfied deps run in parallel; tasks in the same lane queue.
 

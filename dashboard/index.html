@@ -17,6 +17,13 @@
       <span class="sub" id="project">—</span>
     </div>
     <div class="topbar-right">
+      <label class="depth-label" title="Question depth for dashboard-driven runs: easy = skill self-decides reversible calls, hard = asks about everything">depth
+        <select id="depth">
+          <option value="easy" selected>easy</option>
+          <option value="medium">medium</option>
+          <option value="hard">hard</option>
+        </select>
+      </label>
       <button id="roadmap-btn" class="ghost" title="Repo roadmap">roadmap</button>
       <span class="conn" id="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">connecting…</span></span>
       <span class="session" id="session"></span>
@@ -45,6 +52,7 @@
             <div class="badges" id="f-badges"></div>
           </div>
           <div class="feature-actions">
+            <button id="run-fix" class="run hidden" title="Run /sdd:fix — address the review's CHANGES REQUESTED">⚒ Fix</button>
             <button id="run-next" class="run primary" title="Run the next pending stage in the live session">▶ Run next stage</button>
           </div>
         </div>

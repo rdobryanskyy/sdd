@@ -3,7 +3,14 @@
  * dashboard_* tool handlers against a fake broadcast.
  */
 import { describe, it, expect } from 'bun:test'
-import { buildCommand, handleDashboardTool, SKILL_NAMES, DASHBOARD_TOOLS, type Frame } from '../channel.ts'
+import {
+  buildCommand,
+  handleDashboardTool,
+  createAskRegistry,
+  SKILL_NAMES,
+  DASHBOARD_TOOLS,
+  type Frame,
+} from '../channel.ts'
 
 describe('buildCommand allowlist', () => {
   it('builds a literal /sdd: line from validated parts, depth defaults to easy', () => {
@@ -39,11 +46,23 @@ describe('buildCommand allowlist', () => {
     expect(() => buildCommand('specify', '--depth=hard')).toThrow(/invalid slug/)
     expect(() => buildCommand('specify', '')).toThrow(/invalid slug/)
   })
+
+  it('rejects injection through depth (the type lies — the value comes from a browser POST)', () => {
+    const evil = 'easy --dangerously-skip-permissions' as 'easy'
+    expect(() => buildCommand('specify', 'x', { depth: evil })).toThrow(/invalid depth/)
+    expect(() => buildCommand('specify', 'x', { depth: '' as 'easy' })).toThrow(/invalid depth/)
+  })
 })
 
 function fakeCtx() {
   const frames: Frame[] = []
-  return { frames, ctx: { broadcast: (f: Frame) => frames.push(f) } }
+  const asks = createAskRegistry()
+  let n = 0
+  return {
+    frames,
+    asks,
+    ctx: { broadcast: (f: Frame) => frames.push(f), asks, askId: () => `ask-${++n}` },
+  }
 }
 
 describe('handleDashboardTool', () => {
@@ -91,9 +110,75 @@ describe('handleDashboardTool', () => {
     expect(DASHBOARD_TOOLS.map((t) => t.name)).toEqual([
       'dashboard_update',
       'dashboard_log',
+      'dashboard_ask',
       'dashboard_done',
     ])
     expect(handleDashboardTool('dashboard_chat', { text: 'hi' }, ctx)).toBeNull()
     expect(frames).toEqual([])
+  })
+})
+
+describe('dashboard_ask', () => {
+  const OPTS = [{ label: 'REST' }, { label: 'GraphQL', description: 'heavier' }]
+
+  it('registers the question and broadcasts an ask frame with the id + options', () => {
+    const { frames, asks, ctx } = fakeCtx()
+    const res = handleDashboardTool(
+      'dashboard_ask',
+      { question: 'API style?', options: OPTS, slug: 's', stage: 'design' },
+      ctx,
+    )
+    expect(res?.isError).toBeUndefined()
+    expect(res?.content[0].text).toContain('ask-1')
+    expect(res?.content[0].text).toContain('END YOUR TURN')
+    expect(frames).toEqual([
+      {
+        type: 'ask',
+        ask_id: 'ask-1',
+        question: 'API style?',
+        options: OPTS,
+        slug: 's',
+        stage: 'design',
+      },
+    ])
+    expect(asks.take('ask-1')).toMatchObject({ id: 'ask-1', question: 'API style?', slug: 's' })
+  })
+
+  it('rejects an empty question, missing labels, and option counts outside 2-4', () => {
+    const { frames, asks, ctx } = fakeCtx()
+    expect(() => handleDashboardTool('dashboard_ask', { question: '  ', options: OPTS }, ctx)).toThrow(/question/)
+    expect(() => handleDashboardTool('dashboard_ask', { question: 'q', options: [{ label: 'a' }] }, ctx)).toThrow(/2-4/)
+    expect(() =>
+      handleDashboardTool(
+        'dashboard_ask',
+        { question: 'q', options: [{ label: 'a' }, { label: 'b' }, { label: 'c' }, { label: 'd' }, { label: 'e' }] },
+        ctx,
+      ),
+    ).toThrow(/2-4/)
+    expect(() => handleDashboardTool('dashboard_ask', { question: 'q', options: [{ label: 'a' }, {}] }, ctx)).toThrow(
+      /label/,
+    )
+    expect(frames).toEqual([]) // nothing broadcast on any refusal
+    expect(asks.size()).toBe(0) // nothing registered either
+  })
+})
+
+describe('createAskRegistry', () => {
+  const ask = (id: string) => ({ id, slug: null, stage: null, question: 'q', options: [{ label: 'a' }, { label: 'b' }] })
+
+  it('take() is single-use', () => {
+    const reg = createAskRegistry()
+    reg.register(ask('a1'))
+    expect(reg.take('a1')?.id).toBe('a1')
+    expect(reg.take('a1')).toBeNull()
+    expect(reg.take('nope')).toBeNull()
+  })
+
+  it('is bounded — the oldest pending question is evicted past the cap', () => {
+    const reg = createAskRegistry()
+    for (let i = 0; i < 25; i++) reg.register(ask(`a${i}`))
+    expect(reg.size()).toBe(20)
+    expect(reg.take('a0')).toBeNull() // evicted
+    expect(reg.take('a24')?.id).toBe('a24') // newest survives
   })
 })

@@ -13,7 +13,7 @@ const state = {
   slug: null,
   detail: null,
   artifact: null, // {path, kind, label, raw, mtime}
-  pendingRun: null, // {slug, command}
+  runs: new Map(), // request_id -> {slug, command, phase: queued|running|done, verdict}
 };
 
 // ---- api -------------------------------------------------------------------
@@ -106,6 +106,11 @@ function onFrame(f) {
       break;
     case 'command':
       logLine('command', `→ queued ${f.command}`);
+      // Another tab (or a race with our own POST) queued it — track it too.
+      if (f.request_id && !state.runs.has(f.request_id)) {
+        state.runs.set(f.request_id, { slug: f.slug, command: f.command, phase: 'queued' });
+        renderRuns();
+      }
       break;
     case 'update':
       logLine('info', `[${f.stage}] ${f.status}${f.message ? ' — ' + f.message : ''}  ·${f.slug || ''}`);
@@ -114,7 +119,14 @@ function onFrame(f) {
     case 'done':
       logLine('done', `✓ ${f.stage} done — ${f.summary}${f.verdict ? ' [' + f.verdict + ']' : ''}`);
       if (f.next_command) logLine('system', `next: ${f.next_command}`);
-      finishRun(f.verdict);
+      finishRun(f.slug, f.verdict);
+      break;
+    case 'ask':
+      renderAsk(f);
+      break;
+    case 'answer':
+      markAskAnswered(f.ask_id, f.option);
+      logLine('system', `answered: ${f.label}`);
       break;
     case 'refresh':
       refresh(f.slug);
@@ -122,39 +134,121 @@ function onFrame(f) {
   }
 }
 
-// ---- run lifecycle (queued → running → done status line) --------------------
+// ---- run lifecycle (queued → running → done, one line per queued command) ----
 
-function setRunStatus(phase, text) {
+function renderRuns() {
   const el = document.getElementById('run-status');
-  if (!phase) { el.classList.add('hidden'); return; }
-  el.className = 'run-status ' + phase;
-  el.textContent = text;
+  const runs = [...state.runs.values()];
+  if (!runs.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.className = 'run-status';
+  el.innerHTML = '';
+  for (const r of runs) {
+    const line = document.createElement('div');
+    line.className = 'run-line ' + r.phase;
+    line.textContent =
+      r.phase === 'queued' ? `queued: ${r.command} — runs when the session is idle at the prompt`
+      : r.phase === 'running' ? `running ${r.command} in the session…`
+      : `done ${r.command}${r.verdict ? ' — ' + r.verdict : ''}`;
+    el.appendChild(line);
+  }
+}
+
+// The dashboard_update/done frames carry a slug but no request_id (Claude does
+// not know it), so queued→running→done correlation is by slug — approximate,
+// but honest for the common one-run-per-feature case.
+function findRun(phase, slug) {
+  return [...state.runs.entries()].find(
+    ([, r]) => r.phase === phase && (!slug || !r.slug || r.slug === slug),
+  );
 }
 
 function markRunning(slug) {
-  const p = state.pendingRun;
-  if (!p || p.running) return;
-  if (slug && p.slug && slug !== p.slug) return;
-  p.running = true;
-  setRunStatus('running', `running ${p.command} in the session…`);
+  if (findRun('running', slug)) return; // already tracking one for this slug
+  const entry = findRun('queued', slug);
+  if (!entry) return;
+  entry[1].phase = 'running';
+  renderRuns();
 }
 
-function finishRun(verdict) {
-  if (!state.pendingRun) return;
-  setRunStatus('done', `done${verdict ? ' — ' + verdict : ''}`);
-  state.pendingRun = null;
+function finishRun(slug, verdict) {
+  const entry = findRun('running', slug) || findRun('queued', slug);
+  if (!entry) return;
+  entry[1].phase = 'done';
+  entry[1].verdict = verdict || null;
+  renderRuns();
+  setTimeout(() => { state.runs.delete(entry[0]); renderRuns(); }, 60_000);
+}
+
+function currentDepth() {
+  const el = document.getElementById('depth');
+  return el && el.value ? el.value : 'easy';
 }
 
 async function runCommand(slug, command) {
   try {
-    const res = await api('/api/command', { method: 'POST', body: JSON.stringify({ slug, command }) });
+    const res = await api('/api/command', {
+      method: 'POST',
+      body: JSON.stringify({ slug, command, depth: currentDepth() }),
+    });
     const data = await res.json();
     if (!res.ok) { logLine('error', `command rejected: ${data.error || res.status}`); return; }
-    state.pendingRun = { slug, command: data.command, running: false };
-    setRunStatus('queued', `queued: ${data.command} — Claude consumes it when idle at the prompt`);
+    state.runs.set(data.request_id, { slug, command: data.command, phase: 'queued' });
+    renderRuns();
   } catch (e) {
     logLine('error', `command failed: ${e.message}`);
   }
+}
+
+// ---- decision questions (dashboard_ask → option click → /api/answer) --------
+
+function renderAsk(f) {
+  const card = document.createElement('div');
+  card.className = 'ask-card';
+  card.dataset.askId = f.ask_id;
+  const q = document.createElement('div');
+  q.className = 'ask-q';
+  q.textContent = `? ${f.question}` + (f.slug ? `  ·${f.slug}` : '');
+  card.appendChild(q);
+  const opts = document.createElement('div');
+  opts.className = 'ask-opts';
+  (f.options || []).forEach((o, i) => {
+    const b = document.createElement('button');
+    b.className = 'ghost small';
+    b.textContent = o.label;
+    if (o.description) b.title = o.description;
+    b.onclick = () => answerAsk(f.ask_id, i);
+    opts.appendChild(b);
+  });
+  card.appendChild(opts);
+  const hint = document.createElement('div');
+  hint.className = 'ask-hint';
+  hint.textContent = 'pick an option here, or answer in the terminal';
+  card.appendChild(hint);
+  const log = consoleLog();
+  log.appendChild(card);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function answerAsk(askId, option) {
+  try {
+    const res = await api('/api/answer', { method: 'POST', body: JSON.stringify({ ask_id: askId, option }) });
+    const data = await res.json();
+    if (!res.ok) { logLine('error', `answer rejected: ${data.error || res.status}`); return; }
+    markAskAnswered(askId, option);
+  } catch (e) {
+    logLine('error', `answer failed: ${e.message}`);
+  }
+}
+
+function markAskAnswered(askId, option) {
+  document.querySelectorAll('.ask-card').forEach((card) => {
+    if (card.dataset.askId !== askId) return;
+    card.classList.add('answered');
+    [...card.querySelectorAll('button')].forEach((b, i) => {
+      b.disabled = true;
+      if (i === option) b.classList.add('picked');
+    });
+  });
 }
 
 // ---- feature list ----------------------------------------------------------
@@ -226,7 +320,6 @@ async function selectFeature(slug) {
   renderFeatureList();
   document.getElementById('empty-state').classList.add('hidden');
   document.getElementById('feature-view').classList.remove('hidden');
-  setRunStatus(null);
   await loadDetail(slug);
 }
 
@@ -256,6 +349,8 @@ function renderDetail() {
   if (d.reviewVerdict === 'CHANGES REQUESTED') add('changes', 'changes requested');
   if (d.shipped) add('shipped', 'shipped');
   for (const s of (d.surfaces || [])) add('surface', s);
+
+  document.getElementById('run-fix').classList.toggle('hidden', d.reviewVerdict !== 'CHANGES REQUESTED');
 
   renderStepper(d);
   renderArtifactTabs(d);
@@ -473,7 +568,7 @@ function newFeatureDialog() {
   const wrap = document.createElement('div');
   const hint = document.createElement('div');
   hint.className = 'modal-hint';
-  hint.textContent = 'Runs /sdd:specify <slug> in the session (depth=easy). Slug must be kebab-case.';
+  hint.textContent = 'Runs /sdd:specify <slug> in the session (depth from the topbar selector). Slug must be kebab-case.';
   const input = document.createElement('input');
   input.placeholder = 'feature-slug';
   input.autofocus = true;
@@ -520,6 +615,18 @@ async function showRoadmap() {
     }
     const actions = document.createElement('div');
     actions.className = 'modal-actions';
+    // Repo-wide runs: the allowlist wants a slug, so pass the skill name as the
+    // hint argument — the roadmap/survey skills tolerate it.
+    const runBtn = (label, skill, title) => {
+      const b = document.createElement('button');
+      b.className = 'ghost small';
+      b.textContent = label;
+      b.title = title;
+      b.onclick = () => { closeModal(); runCommand(skill, skill); };
+      return b;
+    };
+    actions.appendChild(runBtn('↻ run /sdd:roadmap', 'roadmap', 'Regenerate docs/roadmap.md from the features on disk'));
+    actions.appendChild(runBtn('run /sdd:survey', 'survey', 'Survey the repo and refresh docs/architecture-map.md'));
     const close = document.createElement('button');
     close.className = 'ghost small';
     close.textContent = 'close';
@@ -548,6 +655,9 @@ function init() {
     const ns = nextStage(d);
     if (!ns) { logLine('system', 'pipeline complete — nothing pending'); return; }
     runCommand(d.slug, ns.skill);
+  };
+  document.getElementById('run-fix').onclick = () => {
+    if (state.detail) runCommand(state.detail.slug, 'fix');
   };
   document.getElementById('new-feature').onclick = newFeatureDialog;
   document.getElementById('new-feature-2').onclick = newFeatureDialog;

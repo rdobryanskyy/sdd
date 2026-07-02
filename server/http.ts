@@ -4,8 +4,10 @@
  * with a plain fetch handler + a fake ctx (no MCP/stdio boot required).
  *
  * The API is READ-ONLY over docs/ (features, artifacts, roadmap) plus exactly
- * one mutating route: POST /api/command, which never touches disk — it relays a
- * server-built, allowlisted /sdd: line into the live session.
+ * two mutating routes, neither of which touches disk: POST /api/command relays
+ * a server-built, allowlisted /sdd: line into the live session; POST
+ * /api/answer relays the picked option of a pending dashboard_ask question
+ * (option label text authored by Claude itself — never browser free text).
  */
 
 import { readFileSync, statSync } from 'fs'
@@ -18,7 +20,7 @@ import {
   isValidSlug,
 } from './paths.ts'
 import { listFeatures, getFeatureDetail, getRoadmap } from './state.ts'
-import { buildCommand, type Frame } from './channel.ts'
+import { buildCommand, type Frame, type AskRegistry } from './channel.ts'
 
 export interface HttpCtx {
   token: string
@@ -31,6 +33,8 @@ export interface HttpCtx {
   notify: (params: { content: string; meta: Record<string, unknown> }) => void
   /** Random id for command correlation (injected for determinism in tests). */
   requestId: () => string
+  /** Pending dashboard_ask questions (registered by the MCP tool handler). */
+  asks: AskRegistry
 }
 
 export function json(body: unknown, status = 200): Response {
@@ -185,6 +189,41 @@ async function handleApi(ctx: HttpCtx, req: Request, url: URL, path: string): Pr
       status: 'queued',
     })
     return json({ ok: true, queued: true, request_id: requestId, command: built.content }, 202)
+  }
+
+  // POST /api/answer  { ask_id, option }  → the user's pick for a dashboard_ask
+  // question. Touches no disk. The relayed content quotes the option LABEL that
+  // Claude itself authored in dashboard_ask — the browser contributes only the
+  // index, so this route cannot smuggle free text into the session.
+  if (path === '/api/answer' && req.method === 'POST') {
+    if (!loopbackOk(req)) return json({ error: 'forbidden origin' }, 403)
+    const body = (await req.json()) as { ask_id?: string; option?: number }
+    const ask = ctx.asks.take(String(body.ask_id ?? ''))
+    if (!ask) return json({ error: 'no such pending question (already answered or expired)' }, 404)
+    const idx = Number(body.option)
+    if (!Number.isInteger(idx) || idx < 0 || idx >= ask.options.length) {
+      ctx.asks.register(ask) // still unanswered — put it back
+      return json({ error: 'invalid option index' }, 400)
+    }
+    const picked = ask.options[idx]
+    const where = ask.slug ? ` (${ask.stage ?? 'stage'} ${ask.slug})` : ''
+    ctx.notify({
+      content:
+        `Dashboard answer to question ${ask.id}${where}: "${picked.label}" — ` +
+        `continue the paused run with this decision.`,
+      meta: {
+        source: 'sdd-dashboard',
+        session_id: ctx.sessionId,
+        kind: 'answer',
+        ask_id: ask.id,
+        slug: ask.slug,
+        stage: ask.stage,
+        option: idx,
+        ts: new Date().toISOString(),
+      },
+    })
+    ctx.broadcast({ type: 'answer', ask_id: ask.id, option: idx, label: picked.label })
+    return json({ ok: true, ask_id: ask.id, option: idx }, 202)
   }
 
   return json({ error: 'not found' }, 404)

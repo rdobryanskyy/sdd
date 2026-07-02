@@ -57,7 +57,7 @@ export interface FeatureSummary {
 export interface Artifact {
   path: string // relative to the feature dir
   label: string
-  kind: 'markdown' | 'openapi' | 'json' | 'text'
+  kind: 'markdown' | 'json' | 'text'
 }
 
 export interface FeatureDetail extends FeatureSummary {
@@ -349,7 +349,8 @@ export function listFeatures(): FeatureSummary[] {
 }
 
 const KIND_BY_NAME: Array<[RegExp, Artifact['kind'], string]> = [
-  [/^contracts\/openapi\.ya?ml$/i, 'openapi', 'OpenAPI contract'],
+  // openapi renders as plain text in the read-only dashboard (no redoc)
+  [/^contracts\/openapi\.ya?ml$/i, 'text', 'OpenAPI contract'],
   [/\.ya?ml$/i, 'text', 'YAML'],
   [/\.json$/i, 'json', 'JSON'],
   [/(^|\/)\.size$/i, 'text', 'Size'],

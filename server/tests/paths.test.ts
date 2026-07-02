@@ -75,8 +75,12 @@ describe('assertArtifactPath containment', () => {
 
   it('rejects a disallowed extension, allows the .size basename', () => {
     expect(() => assertArtifactPath('demo', 'evil.sh')).toThrow(/extension not allowed/)
-    // .size may not exist yet — the parent anchors containment
+    writeFileSync(join(tmp, 'docs', 'features', 'demo', '.size'), 'XS\n')
     expect(assertArtifactPath('demo', '.size')).toContain('demo')
+  })
+
+  it('refuses a missing artifact (the API is read-only — no write anchoring)', () => {
+    expect(() => assertArtifactPath('demo', 'not-written-yet.md')).toThrow(/no such artifact/)
   })
 
   it('rejects a symlinked FILE escaping docs/', () => {
@@ -84,13 +88,14 @@ describe('assertArtifactPath containment', () => {
     expect(() => assertArtifactPath('demo', 'leak.md')).toThrow(/escapes docs/)
   })
 
-  it('rejects a missing leaf under a symlinked DIR escaping docs/', () => {
+  it('rejects a file reached through a symlinked DIR escaping docs/', () => {
     symlinkSync(outside, join(tmp, 'docs', 'features', 'demo', 'sub'))
-    expect(() => assertArtifactPath('demo', 'sub/new.md')).toThrow(/escapes docs/)
+    expect(() => assertArtifactPath('demo', 'sub/secret.md')).toThrow(/escapes docs/)
   })
 
   it('refuses anything under a .git dir', () => {
     mkdirSync(join(tmp, 'docs', '.git'), { recursive: true })
+    writeFileSync(join(tmp, 'docs', '.git', 'config.md'), 'x\n')
     expect(() => assertArtifactPath(null, '.git/config.md')).toThrow(/\.git/)
   })
 

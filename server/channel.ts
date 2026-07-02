@@ -118,19 +118,6 @@ export const DASHBOARD_TOOLS: ToolDef[] = [
     },
   },
   {
-    name: 'dashboard_chat',
-    description:
-      'Send free-text back to the dashboard chat pane — answer a question the user typed there, or explain a decision. The dashboard is the chat surface; your transcript output does not reach the browser, only what you send through this tool.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        text: { type: 'string' },
-        slug: { type: 'string' },
-      },
-      required: ['text'],
-    },
-  },
-  {
     name: 'dashboard_done',
     description:
       'Signal a stage finished and hand the dashboard the SDD handoff: what changed, the files to review, and the next command. For review, pass verdict (PASS / CHANGES REQUESTED). Triggers the dashboard to re-derive the feature from disk.',
@@ -182,15 +169,6 @@ export function handleDashboardTool(
         level: str(args.level) ?? 'info',
       })
       return { content: [{ type: 'text', text: 'logged' }] }
-    }
-    case 'dashboard_chat': {
-      ctx.broadcast({
-        type: 'chat',
-        text: String(args.text ?? ''),
-        slug: str(args.slug) ?? null,
-        role: 'claude',
-      })
-      return { content: [{ type: 'text', text: 'sent' }] }
     }
     case 'dashboard_done': {
       ctx.broadcast({

@@ -3,7 +3,7 @@
  * dashboard_* tool handlers against a fake broadcast.
  */
 import { describe, it, expect } from 'bun:test'
-import { buildCommand, handleDashboardTool, SKILL_NAMES, type Frame } from '../channel.ts'
+import { buildCommand, handleDashboardTool, SKILL_NAMES, DASHBOARD_TOOLS, type Frame } from '../channel.ts'
 
 describe('buildCommand allowlist', () => {
   it('builds a literal /sdd: line from validated parts, depth defaults to easy', () => {
@@ -83,6 +83,17 @@ describe('handleDashboardTool', () => {
     const { frames, ctx } = fakeCtx()
     expect(handleDashboardTool('dashboard_handshake', {}, ctx)).toBeNull()
     expect(handleDashboardTool('something_else', {}, ctx)).toBeNull()
+    expect(frames).toEqual([])
+  })
+
+  it('dashboard_chat is gone (read-only dashboard has no chat surface)', () => {
+    const { frames, ctx } = fakeCtx()
+    expect(DASHBOARD_TOOLS.map((t) => t.name)).toEqual([
+      'dashboard_update',
+      'dashboard_log',
+      'dashboard_done',
+    ])
+    expect(handleDashboardTool('dashboard_chat', { text: 'hi' }, ctx)).toBeNull()
     expect(frames).toEqual([])
   })
 })

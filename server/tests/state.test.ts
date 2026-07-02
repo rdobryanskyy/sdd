@@ -162,10 +162,11 @@ describe('project-a', () => {
       expect(paths.some((p) => p.includes('migrations'))).toBe(false)
     })
 
-    it('labels the openapi contract', () => {
+    it('labels the openapi contract (plain text — no in-browser API console)', () => {
       const d = getFeatureDetail('in-progress')!
       const oa = d.artifacts.find((a) => a.path === 'contracts/openapi.yaml')!
-      expect(oa.kind).toBe('openapi')
+      expect(oa.kind).toBe('text')
+      expect(oa.label).toBe('OpenAPI contract')
     })
 
     it('returns null for an unknown slug', () => {

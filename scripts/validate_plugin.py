@@ -353,6 +353,18 @@ def main() -> int:
                + ", ".join(dups)) if dups
               else f"taxonomy row `{row} …` is missing from _shared/surfaces.md (did it move/rename?)")
 
+    # --- architecture-map template shape: the machine-readable keys survey fills ---
+    # implement's command-detection cascade reads test_cmd/lint_cmd from the map frontmatter and
+    # design/others key freshness off reflects_commit — the template must keep declaring them.
+    print("== architecture-map template ==")
+    amap = ROOT / "skills" / "survey" / "templates" / "architecture-map.md"
+    amap_fm = _block_keys(amap)
+    for key in ("test_cmd", "reflects_commit"):
+        check(key in amap_fm,
+              f"architecture-map template frontmatter declares `{key}`",
+              f"skills/survey/templates/architecture-map.md frontmatter lost the `{key}` key — "
+              f"command-detection / staleness checks read it")
+
     # --- model policy consistency: judgment_model is documented in both policy files ---
     # The judgment_model settings key (opus|fable switch for the judgment agents) is defined in
     # the settings doc and consumed per agent-roster's precedence — if either file drops the

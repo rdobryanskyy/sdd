@@ -552,7 +552,6 @@ function shutdown(): void {
   try {
     httpServer?.stop(true) // free the port
   } catch {}
-  setTimeout(() => process.exit(0), 500)
   process.exit(0)
 }
 process.stdin.on('end', shutdown)

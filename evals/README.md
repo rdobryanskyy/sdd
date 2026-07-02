@@ -45,6 +45,7 @@ Exit code is non-zero when any scenario's verdict is `FAIL` (or unparseable).
 | `specify-happy-path` | `/sdd:specify` produces a spec.md with §1–§8, business-observable ACs, `.size` + `.route`, and the handoff block |
 | `design-gate-refusal` | `/sdd:design` on a folder with `.size` but **no spec.md** refuses, points at `specify`, writes no sad.md/ADRs |
 | `classify-size` | `/sdd:classify-size` writes one-token `.size` + `.route` and hands off (utility variant) |
+| `api-fastlane-no-datamodel` | `/sdd:api` on a no-schema-change feature **without** data-model.md does not refuse — it derives the contract from the existing schema, names the legal skip + «existing schema» origins, and emits the handoff |
 
 ## Adding a scenario
 

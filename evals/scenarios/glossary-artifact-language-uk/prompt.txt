@@ -10,5 +10,6 @@ NOT-references given here as the user's already-confirmed answers:
 2. term "burst credit" — definition: a one-off allowance that lets a tenant briefly exceed its
    quota-window limit without being throttled. NOT-reference: none.
 
-Note the project's settings file at .claude/sdd.local.md and honour every key that applies to this
-skill. Write the files and finish by printing the stage-handoff block.
+The project's per-project settings live at .claude/sdd.local.md — read them before writing.
+Follow the skill's protocol exactly (including the template bootstrap). Write the files and
+finish by printing the stage-handoff block.

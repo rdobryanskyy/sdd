@@ -24,6 +24,8 @@ The pipeline's anchor on architecture. It produces `docs/architecture-map.md` �
 
 Repo-level utility (one map serves every feature). The scan is delegated to [`explorer`](../../agents/explorer.md); question phrasing → [`../_shared/ask-style.md`](../_shared/ask-style.md); depth → [`../_shared/size-matrix.md`](../_shared/size-matrix.md).
 
+Map prose follows `artifact_language` (carry the language in the explorer's dispatch prompt) — frontmatter keys like `test_cmd` / `reflects_commit` stay machine-form, module/file names stay as-is → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 Architect / Tech Lead — they own the architecture (brownfield: confirm it reflects reality; greenfield: decide the foundation).

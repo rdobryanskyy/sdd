@@ -22,6 +22,8 @@ End-to-end runner for the persistence cut: data model + migrations + drift check
 
 **Stack-agnostic by design — it imposes no DB philosophy and writes no rules file.** `data-model` **derives the DB + migration conventions from the architecture** — `architecture-map.md` (the migration tool/naming `survey` recorded) + the `sad.md` persistence decisions (§4 strategy / §5 building blocks / §8 crosscutting) + the Accepted ADRs — and **follows** them; the live `migrations/` + schema **corroborate** and fill anything the architecture left implicit. On a greenfield repo with no architecture signal, it **confirms each schema choice with the user** (Socratic) instead of defaulting to a house style. What it applies regardless of stack is migration **safety** (staging, reversibility, FK indexes, zero-downtime decomposition, no-PII) — never a stance on `updated_at` vs not, hard vs soft delete, UUID vs sequence, or whether `CHECK` constraints are allowed. The size matrix (→ [`../_shared/size-matrix.md`](../_shared/size-matrix.md)) governs how much you produce; the aggregate-roots dialogue uses [`../_shared/ask-style.md`](../_shared/ask-style.md).
 
+`data-model.md` prose follows `artifact_language` — SQL, table/column identifiers, headings and frontmatter stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 Backend Lead.

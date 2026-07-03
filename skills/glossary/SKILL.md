@@ -26,6 +26,8 @@ Lazy utility that fixes the meaning of a domain term in `CONTEXT.md` the moment 
 This is a capture utility, not a Socratic stage — it does **not** run the shared Socratic loop or critic. The one shared dependency is question phrasing:
 → [`../_shared/ask-style.md`](../_shared/ask-style.md)
 
+Term definitions follow `artifact_language` — the `## Glossary` heading, the other H2s and the frontmatter stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 Whoever drives the conversation — anyone who spots ambiguity. Tech Lead approves the canonical form when a term is contested.

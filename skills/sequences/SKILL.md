@@ -18,6 +18,8 @@ description: >
 
 Draws the **runtime view** of an already-designed feature: for each critical flow it produces a Mermaid `sequenceDiagram` block — generic participants, happy path plus the error branches the spec demands — and writes them into `docs/features/<slug>/sad.md §6`. One flow at a time, user confirms each. The diagrams are the bridge between the static design (§5 building blocks) and the data layer: every persist/read step you draw becomes a hint for the indexes `data-model` will need.
 
+Diagram labels + §6 prose follow `artifact_language` — but the **existing `sad.md`'s language wins** over the setting; Mermaid keywords (`sequenceDiagram`, `participant`, `alt/else/end`) and participant names that name real modules stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 This skill keeps only its own machinery. Question phrasing is **shared** → [`../_shared/ask-style.md`](../_shared/ask-style.md). **Flow count is driven by the spec, not a cap** — every §4 user story / §5 acceptance criterion is covered (size may collapse *detail*, never *coverage*) → [`../_shared/size-matrix.md`](../_shared/size-matrix.md). Each diagram is **confirmed in prose, never as raw Mermaid** → [`../_shared/diagram-presentation.md`](../_shared/diagram-presentation.md); whether each flow is confirmed per-diagram or written-and-summarized follows the interview-depth setting → [`../_shared/interview-depth.md`](../_shared/interview-depth.md).
 
 ## Owner

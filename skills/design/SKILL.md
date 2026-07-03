@@ -23,6 +23,8 @@ Generator of the **Software Architecture Document** (`docs/features/<slug>/sad.m
 The Socratic machine, the critic, and the size matrix are **shared** — this skill keeps only its deltas:
 → [`../_shared/socratic-loop.md`](../_shared/socratic-loop.md) · [`../_shared/critic.md`](../_shared/critic.md) · [`../_shared/size-matrix.md`](../_shared/size-matrix.md) · [`../_shared/ask-style.md`](../_shared/ask-style.md)
 
+`sad.md` + ADR prose follow `artifact_language` — the Arc42 section headings, frontmatter, C4/Mermaid keywords and ADR `Status` values stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 Depth governs the per-section question volume + autonomy → [`../_shared/interview-depth.md`](../_shared/interview-depth.md). C4 diagrams are confirmed in prose, never as raw source → [`../_shared/diagram-presentation.md`](../_shared/diagram-presentation.md). design is also where the feature's **target surface(s)** are chosen — the first §4 decision, written to `sad.md` frontmatter `target_surfaces` and read (never re-derived) by every downstream stage → [`../_shared/surfaces.md`](../_shared/surfaces.md).
 
 ## Owner

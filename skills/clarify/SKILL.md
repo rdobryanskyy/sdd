@@ -25,6 +25,8 @@ This is a sweep, not a full authoring stage — it does **not** run the shared S
 
 Depth governs how aggressively the sweep hunts + the per-finding question volume → [`../_shared/interview-depth.md`](../_shared/interview-depth.md). (Every surfaced ambiguity is still Resolved or Deferred at every level — that's a floor, not a dial.)
 
+Spec tightenings follow `artifact_language` — but the **existing spec's language wins** over the setting (never retro-translate mid-sweep); headings and machine tokens stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 PM + Tech Lead (the spec's co-authors resolve their own ambiguities). PM owns vague-term / scope / missing-actor calls; Tech Lead owns unmeasured-NFR / under-specified-AC / conflicting-requirement calls.

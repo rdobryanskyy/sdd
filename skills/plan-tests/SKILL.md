@@ -20,6 +20,8 @@ Turns an already-specified feature into a **test plan**: a table that ties every
 
 This skill keeps only its own machinery. Question phrasing is **shared** → [`../_shared/ask-style.md`](../_shared/ask-style.md). Depth (inline in the spec vs a separate file) follows the **size matrix** → [`../_shared/size-matrix.md`](../_shared/size-matrix.md). It names test *levels*, never test *tools* — the concrete commands are detected by `implement` against the repo, not hard-coded here.
 
+Plan prose follows `artifact_language` — the `## Test plan` heading (parsed downstream), test names and level tokens stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 QA + the engineer who will implement the feature (co-authors). QA drives the level breakdown and the edge/error cases; the implementing engineer confirms each acceptance criterion has a reachable test and that the integration strategy fits the repo. The Tech Lead signs off that no acceptance criterion is left uncovered.

@@ -23,6 +23,8 @@ The **post-hoc / asynchronous ADR path** (pipeline stage 8a). `design` spawns AD
 It is a recording utility, not a Socratic design stage — it does **not** run the shared Socratic loop or critic. The two shared dependencies are question phrasing and the worthiness gate:
 → [`../_shared/ask-style.md`](../_shared/ask-style.md) · [`../design/references/blast-radius.md`](../design/references/blast-radius.md)
 
+ADR prose (context / drivers / consequences) follows `artifact_language` — the MADR headings and `Status:` values (`Proposed` / `Accepted` / …) stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 Decision author (usually the Architect or Tech Lead). A reviewer (Tech Lead, plus Security when relevant) signs off the `Proposed → Accepted` transition.

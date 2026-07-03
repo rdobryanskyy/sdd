@@ -32,6 +32,8 @@ Whatever the form, the contract is **derived from `data-model.md` — or, on a l
 
 This skill keeps only its own machinery. Question phrasing is **shared** → [`../_shared/ask-style.md`](../_shared/ask-style.md). Depth (events doc only when async; one resource vs full surface) follows the **size matrix** → [`../_shared/size-matrix.md`](../_shared/size-matrix.md). The drift-resolution dialog reuses the shared 4-state actions — keep it short, point the machinery to `_shared`.
 
+Contract `summary`/`description` prose follows `artifact_language` — paths, `operationId`, status codes and schema names **never** translate → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 Backend Lead (drives the interface). The PM confirms each endpoint maps to a real user story; a frontend / consumer engineer is the first reader — the contract is locked before they start integration.

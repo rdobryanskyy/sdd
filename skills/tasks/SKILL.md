@@ -20,6 +20,8 @@ Task-breakdown generator: atomic tasks ≤1 day, each a separately reviewable ch
 
 Task files **link** to upstream artifacts (`spec.md §AC-N`, `sad.md §6`, `data-model.md`, `contracts/openapi.yaml`, `adr/NNNN-*.md`) — they do not duplicate them. Alongside the human-facing markdown, this skill emits **`tasks.json`**, the contract the `implement` engine reads to build its dependency DAG.
 
+Task prose (`title` / `dod`, the markdown bodies) follows `artifact_language` — the `tasks.json` machine fields (`id`, `layer`, `deps`, `acs`, `files_hint`, `slug`) and tracker states stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 Tech Lead.

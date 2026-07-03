@@ -25,6 +25,8 @@ The Socratic machine, the critic, and the size matrix are **shared** — this sk
 
 Depth governs question volume + autonomy (and which ideation analyses run) → [`../_shared/interview-depth.md`](../_shared/interview-depth.md).
 
+Document prose follows the project's `artifact_language` setting — section headings, frontmatter and machine tokens stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 PM + Tech Lead (co-authors). PM drives goals / non-goals / KPIs; Tech Lead drives context patterns and the acceptance-criteria coverage.

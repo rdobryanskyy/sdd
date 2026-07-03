@@ -18,6 +18,8 @@ The independent review gate. After `implement` has written + tested + committed 
 
 It reuses the shared clean-context discipline ([`../_shared/critic.md`](../_shared/critic.md)) and the [`reviewer`](../../agents/reviewer.md) subagent (read-only). Question phrasing per [`../_shared/ask-style.md`](../_shared/ask-style.md).
 
+Review-record prose follows `artifact_language` (carry the language in the reviewer's dispatch prompt) — the verdict literals `PASS` / `CHANGES REQUESTED` / `REVIEW_CLEAN` and cited identifiers stay English → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
 ## Owner
 
 Tech Lead / a reviewer who did **not** write the code (independence is the point).

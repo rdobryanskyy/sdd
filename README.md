@@ -15,7 +15,7 @@ dial decides how much the skill decides for you vs. interrogates you with trade-
 **Claude Code** — native plugin:
 
 ```text
-/plugin marketplace add genkovich/sdd
+/plugin marketplace add rdobryanskyy/sdd
 /plugin install sdd@sdd
 ```
 
@@ -27,7 +27,7 @@ or `--prefix DIR` to install under an arbitrary directory (useful for trying it 
 
 ```sh
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/genkovich/sdd/main/install.sh | bash -s -- codex
+curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd/main/install.sh | bash -s -- codex
 ```
 
 Then restart codex (skills are discovered at session start) and type `$sdd-specify`.
@@ -36,7 +36,7 @@ Alternative — the plugin marketplace. Note that `add` only **registers** the m
 installs nothing by itself:
 
 ```text
-codex plugin marketplace add genkovich/sdd
+codex plugin marketplace add rdobryanskyy/sdd
 ```
 
 then **inside codex** run `/plugins`, switch to the `sdd` marketplace tab and pick
@@ -59,7 +59,7 @@ The script warns when it detects a marketplace install already registered.
 
 ```sh
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/genkovich/sdd/main/install.sh | bash -s -- cursor
+curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd/main/install.sh | bash -s -- cursor
 ```
 
 Then restart Cursor (or run **Developer: Reload Window**) and invoke a stage by typing `/` in
@@ -587,4 +587,4 @@ with an extension allowlist; all routes require a per-session capability token; 
 
 ## License
 
-MIT © Kyrylo Genkov. See [LICENSE](./LICENSE).
+MIT © Kyrylo Genkov, with modifications © Rostyslav Dobryanskyy. See [LICENSE](./LICENSE).

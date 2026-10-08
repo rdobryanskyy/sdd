@@ -4,69 +4,86 @@ model: haiku
 effort: low
 agents: []
 description: >
-  Use to classify a feature into XS/S/M/L/XL and write docs/features/{slug}/.size plus the
-  pipeline route docs/features/{slug}/.route (quick|standard|full) so later skills know how
-  much of each artifact to produce and how handoffs resolve skips. Triggers on "classify size",
+  Use to classify a feature into XS/S/M/L/XL. It writes docs/features/{slug}/.size and the
+  pipeline route docs/features/{slug}/.route (quick|standard|full). Later skills use them to know
+  how much of each artifact to make and how handoffs resolve skips. Triggers on "classify size",
   "feature size", "is this XS or M for {slug}", "size {slug}", "change route", "/sdd:classify-size {slug}",
-  "classify the size of {slug}", "what is the feature size", "XS or M". Asks four AskUserQuestion
-  (PR count / time / new module-API-migration / breaking changes), maps to a size class via
-  the shared size matrix, derives the default route (XS/S→quick, M→standard, L/XL→full),
-  confirms size + route in ONE question, and writes the one-line .size and .route files — the
-  source of truth; the feature_size: frontmatter mirrors in spec.md and sad.md are re-synced
-  to it on every (re)classification.
+  "classify the size of {slug}", "what is the feature size", "XS or M". It asks four AskUserQuestion
+  (PR count / time / new module-API-migration / breaking changes). It maps the answers to a size
+  class through the shared size matrix and derives the default route (XS/S→quick, M→standard,
+  L/XL→full). It confirms size + route in ONE question and writes the one-line .size and .route
+  files. These files are the source of truth. At each (re)classification, it syncs the
+  feature_size: frontmatter mirrors in spec.md and sad.md to them again.
 ---
 
 # Skill: classify-size
 
-Atomic skill — classifies a feature into XS/S/M/L/XL and fixes the result in
-`docs/features/<slug>/.size`, plus the pipeline **route** (`quick` / `standard` / `full`) in
-`docs/features/<slug>/.route`. This is the single source of size- and route-aware behaviour for
-the rest of the pipeline: later skills read `.size` to decide MVP vs Full output depth, and
-their handoffs read `.route` to decide how optional-stage skips resolve (auto-skip / offered /
-never — the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)).
+This is an atomic skill. It classifies a feature into XS/S/M/L/XL and records the result in
+`docs/features/<slug>/.size`. It also records the pipeline **route** (`quick` / `standard` / `full`)
+in `docs/features/<slug>/.route`. This skill is the single source of the size and route behavior
+for the remaining pipeline:
 
-This skill is the **canonical owner of the size matrix** → [`../_shared/size-matrix.md`](../_shared/size-matrix.md). The classification rules, the MVP-vs-Full table, and the one-sentence rule all live there; this skill only runs the dialogue and writes the file.
+- Later skills read `.size` to decide the output depth (MVP vs Full).
+- Their handoffs read `.route` to decide how the skip of an optional stage resolves (auto-skip /
+  offered / never). See the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md).
 
-**Called inline by `specify`.** When `.size` is absent at the start of the backbone, `specify` step 1 runs this protocol inline (same signals, same file, folded into one bundled question) — this skill stays the standalone utility for classifying up front or **re-classifying when scope changes**; the protocol is never duplicated elsewhere.
+English prose (artifacts, questions, reports, handoff) follows ASD-STE100 Simplified Technical English → [`../_shared/ste100.md`](../_shared/ste100.md).
+
+This skill is the **canonical owner of the size matrix** → [`../_shared/size-matrix.md`](../_shared/size-matrix.md). The classification rules, the MVP-vs-Full table and the one-sentence rule are all in that file. This skill only runs the dialogue and writes the file.
+
+**`specify` calls this skill inline.** If `.size` is absent at the start of the backbone, step 1 of `specify` runs this protocol inline. It uses the same signals and the same file, in one bundled question. This skill stays the standalone utility to classify before the work starts, or to **classify again when the scope changes**. Never copy the protocol into a different file.
 
 ## Owner
 
-PM or Tech Lead (driver of the intake phase). An architect may escalate S → M on spotting a new subsystem.
+The PM or the Tech Lead (the driver of the intake phase). If an architect sees a new subsystem, the architect can change S to M.
 
 ## Inputs
 
 - `<slug>` — feature slug.
-- (Optional) the idea / intake note — for a rough starting hint. The skill works without it.
+- (Optional) the idea or the intake note, as a rough start hint. The skill also works without it.
 
 ## Protocol
 
-1. **Check existing.** `test -f docs/features/<slug>/.size` (and `.route`). If `.size` exists, read both values and ask «`.size` is currently `<X>` (route `<Y>`). Reclassify?». On «no» — STOP (suggest editing, don't overwrite silently). Re-running just to switch the route is a legal, common case — mid-flight override per the Routes table.
-2. **Ask the four signals** — one `AskUserQuestion` each, phrased per [`../_shared/ask-style.md`](../_shared/ask-style.md):
+1. **Examine the existing files.** Run `test -f docs/features/<slug>/.size` (and the same for `.route`). If `.size` exists, read both values and ask «`.size` is currently `<X>` (route `<Y>`). Reclassify?». If the answer is «no», STOP. Recommend a manual edit. Do not overwrite silently. A new run only to change the route is a legal and usual case. It is a mid-flight override per the Routes table.
+2. **Ask the four signals.** Use one `AskUserQuestion` for each signal. Write the questions per [`../_shared/ask-style.md`](../_shared/ask-style.md):
    - **PR count** — `1` / `2–5` / `5–15` / `15+`.
    - **Time to merge the main part** — `≤1 day` / `~1 week` / `1–2 sprints` / `>1 month`.
    - **New module / new API / DB migration** — `none` / `one of three` / `two of three` / `all three`.
    - **Breaking changes for consumers** — `no` / `internal only` / `public clients`.
-3. **Map to a class** using the table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md). On an edge case, name the dominant signal aloud («M because it adds a new API + 1–2 sprints, even though PR count is on the S/M border»). For an all-maximums answer, ask explicitly «needs a separate roadmap?» → yes = XL.
-4. **Confirm size + route — ONE question.** Derive the default route from the size (**XS/S → `quick`, M → `standard`, L/XL → `full`** — the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md)). Then one `AskUserQuestion`: «Classifying as `<size>` (<one-line rationale>) → route `<route>` (<one-line what the route does>). Lock both in?» — options: `Yes` / `Yes, but route <other>` / `No, I want size <X>` / `Reclassify`. Never a second question just for the route.
-5. **Write `.size` + `.route`.** Each one line, plain text — `.size` only `XS`/`S`/`M`/`L`/`XL`; `.route` only `quick`/`standard`/`full` — no comments, no frontmatter. `docs/features/<slug>/.size`, `docs/features/<slug>/.route`.
-6. **Re-sync the frontmatter mirrors (`.size` is the source of truth).** `feature_size:` lives in up to three places: the `.size` file (canonical) plus the `spec.md` and `sad.md` frontmatter (human-readable mirrors). For each of the two files that exists: same value → OK; different (a reclassification, or a hand-edited mirror) → **update the frontmatter to the new `.size` value** and say so — never leave a mirror stale; missing field → suggest adding `feature_size: <size>`. If the user insists a mirror is the right value, that's a reclassification — loop back to step 4 and re-confirm, then re-sync.
-7. **Structural self-check** — per [`../_shared/self-check.md`](../_shared/self-check.md): re-read the written files from disk and verify **3 items**: (1) `.size` holds exactly one of {XS, S, M, L, XL} (one bare word, no trailing content); (2) `.route` holds exactly one of {quick, standard, full}; (3) both frontmatter mirrors (`feature_size:` in `spec.md` and `sad.md`, for whichever exists) match `.size`. Fix + re-check ≤2 cycles; surface anything unresolved.
-8. **Propose commit + handoff.** `size: <slug> classified as <size> (route <route>)` (or fold into the intake commit if a wrapper called this). Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility variant) — *What I did* (incl. «self-check: 3/3 pass») + *Review* (`.size`, `.route`) + *Run next*: resume your backbone stage (e.g. `/sdd:specify <slug>`); `/clear` optional.
+3. **Map to a class.** Use the table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md). For an edge case, say the dominant signal («M because it adds a new API + 1–2 sprints, even though PR count is on the S/M border»). If all answers are at the maximum, ask explicitly «needs a separate roadmap?». If the answer is yes, the class is XL.
+4. **Confirm size + route in ONE question.** Derive the default route from the size (**XS/S → `quick`, M → `standard`, L/XL → `full`**). See the Routes table in [`../_shared/size-matrix.md`](../_shared/size-matrix.md). Then ask one `AskUserQuestion`: «Classifying as `<size>` (<one-line rationale>) → route `<route>` (<one-line what the route does>). Lock both in?». The options are `Yes` / `Yes, but route <other>` / `No, I want size <X>` / `Reclassify`. Never ask a second question only for the route.
+5. **Write `.size` + `.route`.** Each file has one line of plain text. `.size` contains only `XS`/`S`/`M`/`L`/`XL`. `.route` contains only `quick`/`standard`/`full`. Do not add comments or frontmatter. The files are `docs/features/<slug>/.size` and `docs/features/<slug>/.route`.
+6. **Sync the frontmatter mirrors again (`.size` is the source of truth).** `feature_size:` can be in a maximum of three places: the `.size` file (canonical), and the `spec.md` and `sad.md` frontmatter (mirrors for humans). For each of the two files that exists, do this:
+   - If the value is the same, it is OK.
+   - If the value is different (a reclassification, or a mirror that a person edited), **change the frontmatter to the new `.size` value** and tell the user. Never keep a stale mirror.
+   - If the field is missing, recommend that the user adds `feature_size: <size>`.
+
+   If the user says that a mirror has the correct value, that is a reclassification. Go back to step 4, confirm again, then sync again.
+7. **Structural self-check** — per [`../_shared/self-check.md`](../_shared/self-check.md). Read the written files again from disk and make sure of **3 items**:
+   1. `.size` contains exactly one of {XS, S, M, L, XL} (one bare word, with no content after it).
+   2. `.route` contains exactly one of {quick, standard, full}.
+   3. The two frontmatter mirrors (`feature_size:` in `spec.md` and `sad.md`, for the files that exist) agree with `.size`.
+
+   Correct and examine again, 2 cycles or fewer. Show each unresolved item to the user.
+8. **Propose the commit and the handoff.** The commit message is `size: <slug> classified as <size> (route <route>)`. (If a wrapper called this skill, put this change into the intake commit.) Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility variant):
+   - *What I did* (with «self-check: 3/3 pass»).
+   - *Review* (`.size`, `.route`).
+   - *Run next*: go back to your backbone stage (for example `/sdd:specify <slug>`). `/clear` is optional.
 
 ## Definition of Done
 
-- `docs/features/<slug>/.size` holds exactly one of XS/S/M/L/XL; `docs/features/<slug>/.route` holds exactly one of quick/standard/full.
-- The user confirmed the classification — size AND route in one question (never silent, never two questions).
-- If `spec.md` / `sad.md` exist, their `feature_size:` mirrors match `.size` (no drift; `.size` is the source of truth).
+- `docs/features/<slug>/.size` contains exactly one of XS/S/M/L/XL. `docs/features/<slug>/.route` contains exactly one of quick/standard/full.
+- The user confirmed the classification: size AND route in one question (never silent, never two questions).
+- If `spec.md` / `sad.md` exist, their `feature_size:` mirrors agree with `.size` (no drift; `.size` is the source of truth).
 
 ## Anti-patterns
 
-- **Self-classify without confirmation.** The skill proposes; the user locks it.
-- **Optimistic «it's probably S».** Run the four questions — a week later the skipped design hurts.
-- **Skipping the module/API/migration and breaking-change questions.** They are what separates S from M.
-- **Overwriting an existing `.size` / `.route` without asking.**
-- **A multi-line `.size` / `.route` with comments.** Wrappers grep them cheaply — keep each one bare word.
-- **A second question just for the route.** Size + route confirm together; the route option rides in the same `AskUserQuestion`.
+- **A self-classification without confirmation.** The skill proposes. The user locks it.
+- **An optimistic «it's probably S».** Ask the four questions. If you skip the design, the problem will show one week later.
+- **No module/API/migration question and no breaking-change question.** These questions separate S from M.
+- **An overwrite of an existing `.size` / `.route` without a question.**
+- **A `.size` / `.route` file with many lines or comments.** Wrappers grep these files quickly. Keep each file as one bare word.
+- **A second question only for the route.** Confirm size + route together. The route option is in the same `AskUserQuestion`.
 
 ## Example invocation
 

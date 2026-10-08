@@ -1,17 +1,18 @@
-# Template for `api` — copied to docs/features/<slug>/contracts/openapi.yaml, then DERIVED:
-#   fields + constraints  ← data-model.md (every field traces to a column; copy maxLength/pattern/enum)
-#   error responses       ← sad.md §6 sequence alt-branches (one response per branch)
+# Template for `api`. Copy it to docs/features/<slug>/contracts/openapi.yaml, then DERIVE:
+#   fields + constraints  ← data-model.md (each field comes from a column; copy maxLength/pattern/enum)
+#   error responses       ← sad.md §6 sequence alt-branches (one response for each branch)
 #   endpoint list + shape ← spec.md §4 user stories / §5 acceptance criteria
-# Replace every <...>. Keep the conventions baked in below (3.1, BearerAuth, cursor page,
-# {code,message,details?} envelope). Schema NAMES use the domain language from data-model.md —
-# never a Go/TS/Python idiom, never a driver's error type.
+# Replace each <...>. Keep the conventions below (3.1, BearerAuth, cursor page,
+# {code,message,details?} envelope). Schema NAMES use the domain language from data-model.md.
+# Never use a Go/TS/Python idiom. Never use the error type of a driver.
 openapi: 3.1.0
 
 info:
   title: <Feature> API
   version: 0.1.0
-  # One paragraph from spec.md §1 — WHY this API exists, so a consumer (another team, an AI) reads
-  # purpose, not just shape. Bump `version` only with an explicit CHANGELOG line — never silently.
+  # One paragraph from spec.md §1: WHY this API exists. Then a consumer (a different team, an AI)
+  # reads the purpose, not only the shape. Increase `version` only with an explicit CHANGELOG line.
+  # Never increase it silently.
   description: |
     <why this API exists — one paragraph from spec.md §1>
 
@@ -21,12 +22,12 @@ servers:
   - url: http://localhost
     description: Local
 
-# Global default — every operation requires a bearer token unless it overrides with `security: []`.
+# Global default: each operation must have a bearer token. An operation can override this with `security: []`.
 security:
   - BearerAuth: []
 
 paths:
-  # One block per endpoint, one (or more) endpoint per spec §4 user story. Cursor pagination on lists.
+  # One block for each endpoint. One endpoint (or more) for each spec §4 user story. Lists use cursor pagination.
   /api/v1/<resources>:
     get:
       summary: <list ...>
@@ -34,7 +35,7 @@ paths:
       parameters:
         - in: query
           name: after
-          description: cursor — id of the last item seen; the page starts after it
+          description: cursor — the id of the last item that the client saw. The page starts after it
           schema: { type: string, format: uuid }
         - in: query
           name: before
@@ -48,7 +49,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/<Resource>Page" }
-        # One response per error branch in this flow's sad.md §6 alt-block (e.g. 401 from BearerAuth).
+        # One response for each error branch in the sad.md §6 alt-block of this flow (for example, 401 from BearerAuth).
         "401":
           $ref: "#/components/responses/Error"
 
@@ -56,11 +57,11 @@ paths:
       summary: <create ...>
       operationId: create<Resource>
       parameters:
-        # Mutating + retriable (a §6 flow shows a retry note / async actor) ⇒ Idempotency-Key required.
+        # The operation changes data and can be retried (a §6 flow shows a retry note / async actor) ⇒ Idempotency-Key is necessary.
         - in: header
           name: Idempotency-Key
           required: true
-          description: client-generated key; the server returns the first result on retry (TTL <N>h)
+          description: a key that the client makes. On a retry, the server returns the first result (TTL <N>h)
           schema: { type: string, format: uuid }
       requestBody:
         required: true
@@ -68,7 +69,7 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/<Resource>Create" }
             example:
-              # placeholder data only — never real PII
+              # only placeholder data — never real PII
               title: "Test <Resource>"
       responses:
         "201":
@@ -76,7 +77,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/<Resource>" }
-        # Each remaining response = one alt-branch from sad.md §6 (validation / authorization / conflict).
+        # Each other response = one alt-branch from sad.md §6 (validation / authorization / conflict).
         "409":
           description: <conflict — name the invariant, e.g. duplicate slug>
           content:
@@ -102,7 +103,7 @@ components:
 
   schemas:
     # Unified error envelope. `code` is the neutral `module.error_name` convention (a naming rule,
-    # not a language artifact) — it must exist in the repo's error definitions (drift point 2).
+    # not a language artifact). It must exist in the error definitions of the repo (drift point 2).
     Error:
       type: object
       required: [code, message]
@@ -117,16 +118,16 @@ components:
           type: object
           description: optional structured context (field errors, conflicting id, …)
 
-    # One schema per data-model.md entity. Every property traces to a column; copy its constraints.
+    # One schema for each data-model.md entity. Each property comes from a column. Copy its constraints.
     <Resource>:
       type: object
       required: [id]
       additionalProperties: false
       properties:
         id: { type: string, format: uuid }
-        # Bounded text → maxLength from the model's varchar(N); nullable → type: [string, null].
+        # Bounded text → maxLength from the varchar(N) of the model. Nullable → type: [string, null].
         title: { type: string, maxLength: 200 }
-        # Closed set → enum from the model's enumerated type.
+        # Closed set → enum from the enumerated type of the model.
         status: { type: string, enum: [<value_a>, <value_b>] }
         # Nullable column — 3.1 style, NOT `nullable: true`.
         description: { type: [string, "null"] }
@@ -139,7 +140,7 @@ components:
       properties:
         title: { type: string, maxLength: 200 }
 
-    # Cursor page wrapper for every list response — never offset.
+    # Cursor page wrapper for each list response. Never offset.
     <Resource>Page:
       type: object
       required: [items, has_next, has_prev]

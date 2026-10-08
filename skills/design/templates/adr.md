@@ -1,6 +1,6 @@
 <!-- Format: MADR (Markdown Any Decision Record). -->
-<!-- Spawned by `design` when a decision crosses the blast-radius gate (references/blast-radius.md),
-     and also written by `decide-adr` for post-hoc decisions. -->
+<!-- `design` spawns this file when a decision crosses the blast-radius gate (references/blast-radius.md).
+     `decide-adr` also writes it for post-hoc decisions. -->
 
 ---
 status: Accepted                                # Proposed → Accepted → Superseded by NNNN. `design` writes Accepted directly.
@@ -23,13 +23,13 @@ ticket: "<tracker ticket that triggered the feature>"
 
 ## Context
 
-<2–4 sentences: what is happening, why this decision must be made now. Pull from sad.md §3 (Context)
+<2–4 sentences: what occurs, and why the team must make this decision now. Use sad.md §3 (Context)
 + the section that triggered this ADR.>
 
 ## Decision drivers
 
-<bullets — the quality goals / constraints that pushed the choice. Each bullet comes from spec §6 NFR,
-or §2 SAD Constraints, or a §1 top-3 quality goal. Don't invent drivers — this filters out pet decisions.>
+<bullets — the quality goals / constraints that caused the choice. Each bullet comes from spec §6 NFR,
+or §2 SAD Constraints, or a §1 top-3 quality goal. Do not invent drivers. This rule removes personal-preference decisions.>
 
 - <e.g. latency target from spec §6 NFR>
 - <e.g. multi-tenant isolation requirement from spec §6.1>
@@ -37,8 +37,8 @@ or §2 SAD Constraints, or a §1 top-3 quality goal. Don't invent drivers — th
 
 ## Considered options
 
-<List ALL options presented in the AskUserQuestion, including the rejected ones. One line each.
-Do NOT add a strawman — an option an existing constraint already excludes (a critic F6 hit).>
+<List ALL options that the AskUserQuestion showed, with the rejected ones. One line for each.
+Do NOT add a strawman: an option that an existing constraint already excludes (a critic F6 hit).>
 
 1. **<Option A>** — <one sentence>.
 2. **<Option B>** — <one sentence>.
@@ -46,7 +46,7 @@ Do NOT add a strawman — an option an existing constraint already excludes (a c
 
 ## Decision outcome
 
-**Chosen:** Option <letter or name>. <1–2 sentences — why this won over the alternatives, citing the
+**Chosen:** Option <letter or name>. <1–2 sentences — why this option is better than the alternatives. Cite the
 decision drivers above.>
 
 ## Consequences
@@ -62,14 +62,14 @@ decision drivers above.>
 **Neutral**
 - <e.g. switching to the alternative later is possible but needs a data backfill>
 
-<!-- An honest consequence log fills Negative and Neutral too, not only Positive. -->
+<!-- An honest consequence log fills Negative and Neutral also, not only Positive. -->
 
 ## Links
 
-<!-- Without this section an ADR is an orphan. An ADR lives in three links:
-       1) up to the spec (which user story triggered it)
-       2) up to a §N of the SAD (which section it attaches to)
-       3) sideways to a sibling ADR (if together they form one contract) -->
+<!-- Without this section, an ADR is an orphan. An ADR has three links:
+       1) up to the spec (the user story that triggered it)
+       2) up to a §N of the SAD (the section that it attaches to)
+       3) sideways to a sibling ADR (if the two ADRs make one contract) -->
 
 - Spec: [[../spec.md]]
 - SAD: [[../sad.md]] §<N>

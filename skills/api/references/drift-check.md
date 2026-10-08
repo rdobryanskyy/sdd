@@ -2,17 +2,17 @@
 
 The contract is a **derived** artifact: `data-model.md` (typed shape) + `sad.md` §6 sequences
 (error branches, async actors) + `spec.md` §4/§5 (endpoint list, observable outcomes) → OpenAPI.
-This file is the operational detail for step 7 of the spine — what the report holds and what
-each drift point compares. The spine ([`../SKILL.md`](../SKILL.md)) is the source of truth for
-when this runs.
+This file gives the operational details for step 7 of the spine: the contents of the report and
+the comparison of each drift point. The spine ([`../SKILL.md`](../SKILL.md)) is the source of
+truth for when this check runs.
 
 ## `api-sync-report.md` shape
 
-Written to `docs/features/<slug>/contracts/api-sync-report.md` next to the YAML. Two sections.
+Write it to `docs/features/<slug>/contracts/api-sync-report.md`, next to the YAML. It has two sections.
 
 ### Section A — field-origins table
 
-One row per `(operation, schema_field)` pair, so every field in the contract is traceable:
+Write one row for each `(operation, schema_field)` pair. Then you can trace each field in the contract:
 
 ```
 | schema_path                | origin                                        | confidence |
@@ -24,97 +24,104 @@ One row per `(operation, schema_field)` pair, so every field in the contract is 
 | publishLesson.published_at | inferred from spec §5 AC-4, no column         | low        |
 ```
 
-- **high** — field maps to a `data-model.md` column with a matching type/constraint.
+- **high** — the field maps to a `data-model.md` column with a matching type or constraint.
 - On a **legal fast-lane skip** (no `data-model.md`, no schema change — SKILL.md step 1), the
-  origin is **`existing schema — <migration/DDL anchor>`**: the live migration file (or DDL
-  statement) that defines the column. Same confidence scale — a column with a matching
-  type/constraint in the live DDL is `high`.
-- **medium** — field derived from a spec field name with no column yet (e.g. a computed/response-only field).
-- **low** — field inferred from a sequence message name only; flag it for confirmation.
+  origin is **`existing schema — <migration/DDL anchor>`**. This is the live migration file (or
+  DDL statement) that defines the column. The confidence scale is the same. A column with a
+  matching type or constraint in the live DDL is `high`.
+- **medium** — the field comes from a field name in the spec, and no column exists yet (for
+  example, a computed field or a field that is only in the response).
+- **low** — the field is inferred only from the name of a sequence message. Flag it for confirmation.
 
-A `low` row is **declared incompleteness**, not an error — it tells the team what `--reconcile`
-will tighten when the model gains that column. Never hide it.
+A `low` row is **declared incompleteness**, not an error. It tells the team what `--reconcile`
+will make stricter when the model gets that column. Never hide it.
 
 ### Section B — drift findings (4-point checklist)
 
-Each point is ✓ or ✗ with a one-line diagnostic on ✗.
+Each point is ✓ or ✗. A ✗ has a one-line diagnostic.
 
-1. **Endpoint ↔ data-model** *(core)* — every endpoint reads/writes ≥1 entity in `data-model.md`
-   (e.g. `POST /lessons/{id}/publish` mutates `lesson.status`). On a legal fast-lane skip
-   (no `data-model.md`), fall back to: every endpoint reads/writes ≥1 entity in the **existing
-   schema** (the live `migrations/` DDL) — the same mirror as the sad.md fallback below. Absent
-   sad.md, fall back to: every endpoint maps to a §4 user story.
-2. **Error code ↔ repo error definition** *(core)* — every `code` in an `Error` response exists in
-   the repo's error definitions, **checked in the form the repo uses**. Detect that form first —
-   a constants/enum file, an error registry, a sentinel module, a generated table — and match
-   against it; do **not** assume any one language or a Go-style `domain/errors.go`. If the repo
-   has no central error list yet, record "no error registry found — codes are the contract's
-   proposal; reconcile when the repo defines them" rather than failing the point.
-3. **Validation ↔ constraint** *(core)* — `maxLength` / `pattern` / `enum` in the contract align
-   with the bounded types and uniqueness/format constraints in `data-model.md` — or, on a legal
-   fast-lane skip, with the **existing schema's DDL** (column types, `CHECK`s, uniqueness in the
-   live migrations). On a conflict, take the **stricter** value and flag both — the human
-   resolves which artifact is wrong.
-4. **OpenAPI ↔ sequence** *(supporting)* — the methods, paths, and outcome branches the §6
-   sequences imply match the contract. Mismatch usually means a sequence was drawn before the
-   contract was finalized and never updated. Because §6 participants are generic
-   (`<client>`/`<service>`/`<data-store>`), match on the **flow and its `alt`-branches**, not on
-   participant names — a branch like `alt not owner` must have a corresponding error response.
+1. **Endpoint ↔ data-model** *(core)* — each endpoint reads or writes ≥1 entity in `data-model.md`
+   (for example, `POST /lessons/{id}/publish` changes `lesson.status`).
+   - On a legal fast-lane skip (no `data-model.md`), use this fallback: each endpoint reads or
+     writes ≥1 entity in the **existing schema** (the live `migrations/` DDL). This is the same
+     as the sad.md fallback below.
+   - If sad.md is absent, use this fallback: each endpoint maps to a §4 user story.
+2. **Error code ↔ repo error definition** *(core)* — each `code` in an `Error` response exists in
+   the error definitions of the repo, **checked in the form that the repo uses**.
+   - First, find that form: a constants or enum file, an error registry, a sentinel module, a
+     generated table. Then compare with it.
+   - Do **not** assume one language or a Go-style `domain/errors.go`.
+   - If the repo has no central error list yet, do not fail the point. Record "no error registry
+     found — codes are the contract's proposal; reconcile when the repo defines them".
+3. **Validation ↔ constraint** *(core)* — `maxLength` / `pattern` / `enum` in the contract agree
+   with the bounded types and the uniqueness and format constraints in `data-model.md`.
+   - On a legal fast-lane skip, they agree with the **DDL of the existing schema** (column types,
+     `CHECK`s, uniqueness in the live migrations).
+   - If there is a conflict, use the **stricter** value and flag both values. The person decides
+     which artifact is wrong.
+4. **OpenAPI ↔ sequence** *(supporting)* — the methods, paths and outcome branches that the §6
+   sequences show agree with the contract.
+   - A difference usually means that a sequence was drawn before the contract was final, and
+     nobody updated it.
+   - The §6 participants are generic (`<client>`/`<service>`/`<data-store>`). Thus, compare the
+     **flow and its `alt` branches**, not the participant names.
+   - A branch such as `alt not owner` must have a related error response.
 
-A **core** point (1–3) failing — or **≥3 flags** of any kind in one run — pauses the run and is
-surfaced to the user before writing. **Supporting** point (4) failing becomes a follow-up note in
-the report. Resolve each finding via the shared 4-state actions
+If a **core** point (1–3) fails, or if there are **≥3 flags** of any kind in one run, pause the
+run. Show the findings to the user before you write. If the **supporting** point (4) fails, write
+a follow-up note in the report. Resolve each finding with the shared 4-state actions
 ([`../../_shared/ask-style.md`](../../_shared/ask-style.md)):
 
-- **Accept as is** — record the mismatch as accepted (e.g. an intentionally internal entity with
-  no endpoint), move on.
-- **Fix the contract** — regenerate the affected operation/schema to match the source.
-- **Save as Open Question** — park it with owner + due; the field/endpoint stays with a
-  `# unresolved` note until answered.
-- **Fix the source first** — STOP; the contract waits for the user to correct `data-model.md` /
-  the sequence (this skill never edits sources). On a legal fast-lane skip the "source" is the
-  existing schema — a mismatch there usually means the skip was NOT legal after all (the feature
-  needs a column that doesn't exist): route it to `data-model <slug>`, not to a schema hand-edit.
+- **Accept as is** — record the difference as accepted (for example, an entity that is
+  intentionally internal and has no endpoint). Then continue.
+- **Fix the contract** — make the related operation or schema again, so that it agrees with the source.
+- **Save as Open Question** — keep it for later, with an owner and a due date. The field or the
+  endpoint stays with a `# unresolved` note until there is an answer.
+- **Fix the source first** — STOP. The contract waits until the user corrects `data-model.md` or
+  the sequence. (This skill never changes the sources.)
+  - On a legal fast-lane skip, the "source" is the existing schema. A difference there usually
+    means that the skip was NOT legal (the feature needs a column that does not exist).
+  - Send it to `data-model <slug>`. Do not change the schema by hand.
 
 ## Reconcile semantics (`--reconcile`)
 
-Run after an upstream artifact changed — most often `data-model.md` arrived (or was tightened)
-after a thinner first pass. The reconcile pass:
+Run this after an upstream artifact changed. Usually, `data-model.md` arrived (or became stricter)
+after a first pass with less data. The reconcile pass:
 
-1. Re-reads all inputs.
-2. Tightens loose types where the model now carries a constraint (a bare `string` becomes
-   `string` + `maxLength`; a free field becomes an `enum`).
-3. Refreshes the Section A confidence column (`low`/`medium` → `high` where a column now backs the field).
-4. **Surfaces real drift** — any field that *had* an inferred origin but *now disagrees* with the
-   model. This is the load-bearing output: stale incompleteness becomes either resolved or a
-   genuine conflict, and the two never get confused.
+1. Reads all inputs again.
+2. Makes the loose types stricter where the model now has a constraint. A bare `string` becomes
+   `string` + `maxLength`. A free field becomes an `enum`.
+3. Updates the confidence column of Section A (`low`/`medium` → `high` where a column now supports the field).
+4. **Shows real drift**: each field that *had* an inferred origin but *now does not agree* with
+   the model. This is the most important output. Each old incompleteness becomes resolved or
+   becomes a real conflict. The two never get mixed.
 
-`info.version` is never bumped here — the user bumps semver explicitly with a CHANGELOG line.
+`info.version` never increases here. The user increases the semver explicitly with a CHANGELOG line.
 
 ## Conflict table — human in the loop
 
 | Conflict | Skill action |
 |---|---|
-| Field in `data-model.md` with no story in `spec.md` covering it | Add it to the schema with a `# unused-in-spec` note in the report; ask the user. |
-| A §6 sequence references a flow that maps to no endpoint | Flag `# orphan-sequence` in the report; ask (forgotten endpoint? internal job?). |
-| `spec.md` §5 constraint contradicts a `data-model.md` constraint | Take the stricter value; flag both; the human resolves which artifact is wrong. |
-| Existing `openapi.yaml` has a field absent from every source | Keep it with a `# manual-addition` note; flag in the report. |
-| A field disappeared from `data-model.md` | Keep it in the YAML with a `# stale` note; surface it — the human removes from the contract or restores in the model. |
+| A field in `data-model.md` that no story in `spec.md` covers | Add it to the schema with a `# unused-in-spec` note in the report. Ask the user. |
+| A §6 sequence has a flow that maps to no endpoint | Flag `# orphan-sequence` in the report. Ask (a forgotten endpoint? an internal job?). |
+| A `spec.md` §5 constraint does not agree with a `data-model.md` constraint | Use the stricter value. Flag both. The person decides which artifact is wrong. |
+| The existing `openapi.yaml` has a field that is absent from all sources | Keep it with a `# manual-addition` note. Flag it in the report. |
+| A field disappeared from `data-model.md` | Keep it in the YAML with a `# stale` note. Show it. The person removes it from the contract or puts it back in the model. |
 
-On a **legal fast-lane skip** the `data-model.md` rows read against the **existing schema**
-instead; a field the contract needs that exists in *no* live migration is the loudest possible
-flag — it means a schema change exists and the skip was illegal → stop and run `data-model <slug>`.
+On a **legal fast-lane skip**, compare the `data-model.md` rows with the **existing schema**. The
+contract can need a field that exists in *no* live migration. This is the most important flag. It
+means that a schema change exists and that the skip was illegal → stop and run `data-model <slug>`.
 
-If ≥3 flags appear in one run, pause, list them, and ask whether to continue or fix the sources first.
+If ≥3 flags occur in one run, pause and list them. Then ask if you must continue or fix the sources first.
 
 ## Defaults (deviation by ADR only)
 
-A fixed minimum, not invented per feature; an `adr/*.md` overrides any of them and the report
-records "deviation by ADR-NNNN".
+These defaults are a fixed minimum. Do not make new defaults for each feature. An `adr/*.md` can
+override each default. Then the report records "deviation by ADR-NNNN".
 
-- OpenAPI **3.1.0** — nullability via `type: [string, null]`, never `nullable: true` (3.0 style).
+- OpenAPI **3.1.0** — nullability with `type: [string, null]`, never `nullable: true` (3.0 style).
 - Error envelope **`{code, message, details?}`**, `code` = neutral `module.error_name` snake_case.
-- **Cursor** pagination (`?after=&before=&limit=`) wrapped in `{items, has_next, has_prev, next_cursor}` — never offset.
-- **URL** versioning (`/api/v1/...`) — never a `?v=2` query param.
-- **BearerAuth** global; a public endpoint declares explicit `security: []`.
-- `$ref` mandatory for shared schemas; placeholder data only in `example` blocks (no real PII).
+- **Cursor** pagination (`?after=&before=&limit=`) in the wrapper `{items, has_next, has_prev, next_cursor}`. Never offset.
+- **URL** versioning (`/api/v1/...`). Never a `?v=2` query parameter.
+- **BearerAuth** global. A public endpoint declares explicit `security: []`.
+- `$ref` is mandatory for shared schemas. Use only placeholder data in `example` blocks (no real PII).

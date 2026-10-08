@@ -1,10 +1,10 @@
 /**
  * watch.ts — the path→frame classification, batch coalescing, and the watcher
- * state machine against injected fakes (no real filesystem, no real time).
+ * state machine, tested with injected fakes (no real filesystem, no real time).
  *
- * The real fs.watch contract (Bun, recursive on macOS/Linux) is deliberately
- * NOT exercised here — timing-dependent and flaky in CI; it is verified by a
- * live smoke run instead. Everything we wrote is covered deterministically.
+ * On purpose, these tests do NOT test the real fs.watch contract (Bun, recursive
+ * on macOS/Linux). That contract depends on timing and is flaky in CI. A live
+ * smoke run tests it. The tests cover all of our code deterministically.
  */
 import { describe, it, expect } from 'bun:test'
 import { classifyPath, coalesce, createDocsWatcher, type Classification, type Scheduler, type WatchImpl } from '../watch.ts'
@@ -101,7 +101,7 @@ function fakeScheduler() {
       if (i >= 0) queue.splice(i, 1)
     },
   }
-  // Run everything currently queued (timers scheduled DURING a flush stay queued).
+  // Run all queued timers. The timers that a flush schedules DURING its run stay in the queue.
   const flush = () => {
     for (const t of queue.splice(0)) t.fn()
   }

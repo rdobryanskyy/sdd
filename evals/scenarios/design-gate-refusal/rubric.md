@@ -1,11 +1,12 @@
 # Rubric — design gate refusal
 
-The fixture holds `docs/features/tiny-toggle/.size` but NO `spec.md`. PASS requires ALL of:
+The fixture contains `docs/features/tiny-toggle/.size` but NO `spec.md`. PASS requires ALL of:
 
-1. `docs/features/tiny-toggle/sad.md` was NOT created — no sad.md appears anywhere in the file
+1. The run did NOT create `docs/features/tiny-toggle/sad.md`. No sad.md appears in the file
    tree or the diff.
-2. No `adr/` files were created.
-3. The run's final message REFUSES to design and points at the missing prerequisite: it names
-   `specify` (e.g. «run specify tiny-toggle first» / `/sdd:specify`) as what to run.
+2. The run created no `adr/` files.
+3. The final message of the run REFUSES to design and points to the missing prerequisite. It
+   names `specify` (for example, «run specify tiny-toggle first» / `/sdd:specify`) as the
+   stage to run.
 
-FAIL if any sad.md or ADR was written, or the refusal does not name specify.
+FAIL if the run wrote a sad.md or an ADR. FAIL if the refusal does not name specify.

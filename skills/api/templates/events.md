@@ -1,8 +1,8 @@
-<!-- Template for `api` — copied to docs/features/<slug>/contracts/events.md ONLY when the -->
+<!-- Template for `api`. Copy it to docs/features/<slug>/contracts/events.md ONLY if the -->
 <!-- feature has async flows (a sad.md §6 sequence with a <message-bus> / <external-system> -->
-<!-- participant, an enqueue/deliver message, or a retry note). One `## Event` block per async -->
-<!-- message in the sequences. Event names use the domain language from data-model.md, not a -->
-<!-- broker/library idiom. Delete this file if the feature is fully synchronous. -->
+<!-- participant, an enqueue/deliver message, or a retry note). Write one `## Event` block for each -->
+<!-- async message in the sequences. Event names use the domain language from data-model.md, not a -->
+<!-- broker/library idiom. If the feature is fully synchronous, delete this file. -->
 ---
 status: Draft
 owner: "<Backend Lead>"
@@ -13,9 +13,9 @@ feature_size: M
 
 # Events — <feature>
 
-Async contract for the flows drawn in `sad.md` §6. Each event is a published fact; subscribers
-read it. Like the OpenAPI contract, this is **derived** from the sequences — every event here
-maps to an enqueue/deliver message in a §6 diagram.
+This is the async contract for the flows in `sad.md` §6. Each event is a published fact, and
+subscribers read it. As with the OpenAPI contract, this contract is **derived** from the sequences.
+Each event here maps to an enqueue/deliver message in a §6 diagram.
 
 ## Channel: `<channel-name>`
 
@@ -26,8 +26,8 @@ maps to an enqueue/deliver message in a §6 diagram.
 
 ## Event: `<module>.<action>.v<N>`
 
-<!-- Name = the neutral `module.action.vN` convention. The envelope mirrors the HTTP error model's -->
-<!-- spirit: a small, stable, machine-readable head + a typed `data` body. -->
+<!-- Name = the neutral `module.action.vN` convention. The envelope follows the same idea as the -->
+<!-- HTTP error model: a small, stable, machine-readable head + a typed `data` body. -->
 
 ```json
 {
@@ -43,18 +43,18 @@ maps to an enqueue/deliver message in a §6 diagram.
 
 - **Required fields:** `<event_id, event_type, version, occurred_at, ...>`.
 - **Origin:** sad.md §6 `<flow name>` → message `<enqueue ...>`.
-- **Backwards-compat policy:** additive-only — a new optional field is fine; removing or renaming
-  a field is a new version (`v<N+1>`). Subscribers must ignore unknown fields.
+- **Backwards-compat policy:** additive-only. A new optional field is permitted. If you remove
+  or rename a field, this is a new version (`v<N+1>`). Subscribers must ignore unknown fields.
 
 ## Idempotency & retry
 
-<!-- Pull these numbers from the §6 retry note and dead-letter branch — do not invent them. -->
+<!-- Get these numbers from the §6 retry note and the dead-letter branch. Do not make them up. -->
 
-- **Idempotency:** consumers dedupe on `event_id` (a redelivery carries the same id).
+- **Idempotency:** consumers remove duplicates by `event_id` (a second delivery has the same id).
 - **Retry:** `<N>` attempts with exponential backoff.
-- **Dead-letter:** route to `<channel-name>.dlq` after `<N>` failed attempts; on-call drains it.
+- **Dead-letter:** after `<N>` failed attempts, send the event to `<channel-name>.dlq`. The on-call engineer empties it.
 
 ## Schema registry
 
-- Registry: `<url / repo path>` — where the canonical schema for each event version lives.
-- Validator: `<tool the repo already uses>` — detect it; do not assume one.
+- Registry: `<url / repo path>` — the location of the canonical schema for each event version.
+- Validator: `<tool the repo already uses>` — find it. Do not assume one.

@@ -3,15 +3,16 @@
 PASS requires ALL of:
 
 1. `docs/features/rate-limit-bump/spec.md` exists and contains the eight spec sections §1–§8
-   (Context, Goals, Non-goals, User stories, Acceptance criteria, NFR, KPI, Open questions —
-   numbered headings or clearly equivalent).
-2. The §5 acceptance criteria are business-observable: no HTTP verbs, no URL paths, no
-   status-code numerics, no SQL fragments anywhere in §5.
+   (Context, Goals, Non-goals, User stories, Acceptance criteria, NFR, KPI, Open questions).
+   The sections have numbered headings or clearly equivalent headings.
+2. The §5 acceptance criteria are business-observable. §5 contains no HTTP verbs, no URL
+   paths, no status-code numbers and no SQL fragments.
 3. `docs/features/rate-limit-bump/.size` exists and its content is exactly one token from
-   {XS, S, M, L, XL}. If `.route` was written, it is exactly one of {quick, standard, full}.
-4. The run's final message ends with a stage-handoff block: a "What I did" part, a
-   "Review before continuing" part listing real `docs/features/rate-limit-bump/...` paths, and a
-   "Run next" part naming the next `/sdd:` command.
+   {XS, S, M, L, XL}. If the run wrote `.route`, it is exactly one of {quick, standard, full}.
+4. The final message of the run ends with a stage-handoff block. The block has these parts:
+   - a "What I did" part;
+   - a "Review before continuing" part that lists real `docs/features/rate-limit-bump/...` paths;
+   - a "Run next" part that names the next `/sdd:` command.
 
-FAIL if spec.md is missing, a section is absent with no explicit N/A, an AC leaks implementation
-tokens, `.size` is malformed, or no handoff block was printed.
+FAIL if spec.md is missing. FAIL if a section is absent without an explicit N/A. FAIL if an AC
+leaks implementation tokens. FAIL if `.size` is malformed. FAIL if the run printed no handoff block.

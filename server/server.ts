@@ -2,15 +2,19 @@
 /**
  * SDD Visual Dashboard + MCP bridge — ONE process.
  *
- * Holds the stdio channel to Claude (the sole way to emit
- * notifications/claude/channel) AND an embedded Bun.serve() HTTP+WS listener on
- * 127.0.0.1 — exactly as the Telegram plugin embeds its grammy poller. The
- * browser tab is just another channel; the server re-skins a shipped pattern.
+ * This process holds two things:
+ * - The stdio channel to Claude. It is the only way to emit
+ *   notifications/claude/channel.
+ * - An embedded Bun.serve() HTTP+WS listener on 127.0.0.1. The Telegram plugin
+ *   embeds its grammy poller in the same way.
+ * The browser tab is only one more channel. The server uses a pattern that
+ * already shipped, with a different UI.
  *
  *   Browser ⇄ HTTP/WS ⇄ [this process] ⇄ stdio MCP ⇄ Claude
  *
- * Reads/writes ONLY <PROJECT>/docs/. Drives the pipeline by pushing validated
- * `/sdd:<skill> <slug>` lines inbound; Claude reports back via dashboard_* tools.
+ * The process reads and writes ONLY <PROJECT>/docs/. It controls the pipeline:
+ * it pushes validated `/sdd:<skill> <slug>` lines inbound. Claude reports back
+ * through the dashboard_* tools.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
@@ -34,9 +38,9 @@ const STATIC_ROOT = resolve(import.meta.dir, '..', 'dashboard')
 const DEFAULT_PORT = Number(process.env.SDD_DASHBOARD_PORT) || 4178
 const PORT_SCAN = 12 // try DEFAULT_PORT .. DEFAULT_PORT+11
 
-// Per-session capability token — defends mutating routes against other local
-// pages POSTing to 127.0.0.1:<port>. Issued at boot, handed to the browser by
-// /sdd:start via the URL query string.
+// The capability token for each session. It protects the mutating routes from
+// other local pages that send a POST to 127.0.0.1:<port>. The server makes the
+// token at boot. /sdd:start gives it to the browser in the URL query string.
 const TOKEN = process.env.SDD_DASHBOARD_TOKEN || randomBytes(24).toString('hex')
 const SESSION_ID = process.env.CLAUDE_CODE_SESSION_ID || randomBytes(8).toString('hex')
 
@@ -57,25 +61,25 @@ function readConfig(): DashConfig {
     try {
       const text = readFileSync(join(project, '.claude', 'sdd.local.md'), 'utf8')
       const fm = frontmatter(text)
-      // Settings values carry inline `# comment` docs + optional quotes — normalize.
+      // Settings values can have inline `# comment` docs and quotes. Normalize them.
       const enabledVal = configValue(fm.dashboard_enabled ?? '')
       const portVal = configValue(fm.dashboard_port ?? '')
       if (enabledVal === 'true') enabled = true
       if (/^\d+$/.test(portVal)) port = Number(portVal)
     } catch {
-      // no settings file — fall back to env/default
+      // there is no settings file, so use the env value or the default
     }
   }
   return { enabled, port }
 }
 
-// ---- lifecycle hygiene (mirrors Telegram server.ts) ------------------------
+// ---- lifecycle hygiene (the same as Telegram server.ts) -------------------
 
 mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 })
 try {
   const stale = parseInt(readFileSync(PID_FILE, 'utf8'), 10)
   if (stale > 1 && stale !== process.pid) {
-    process.kill(stale, 0) // throws if already dead
+    process.kill(stale, 0) // throws if the process is already dead
     log(`replacing stale server pid=${stale}`)
     process.kill(stale, 'SIGTERM')
   }
@@ -102,9 +106,9 @@ function broadcast(frame: Frame): void {
   }
 }
 
-// The channel is push-only, so a quiet dashboard sends nothing — and Bun's WS
-// idleTimeout would cull the silent socket every ~2 minutes. Server-side pings
-// keep it alive without any browser-side protocol.
+// The channel is push-only, so a quiet dashboard sends nothing. Then the Bun WS
+// idleTimeout closes the silent socket after about 2 minutes. Pings from the
+// server keep the socket open, and the browser needs no protocol for this.
 setInterval(() => {
   for (const ws of clients) {
     try {
@@ -113,12 +117,12 @@ setInterval(() => {
   }
 }, 30_000).unref()
 
-// Live refresh: any change under <project>/docs pushes a refresh frame, so
-// terminal-driven runs update the browser too (not only dashboard_* calls).
+// Live refresh: each change under <project>/docs pushes a refresh frame. Thus
+// the runs from the terminal also update the browser, not only dashboard_* calls.
 const docsWatcher = createDocsWatcher({ broadcast, log })
 
-// Pending dashboard_ask questions — registered by the MCP tool handler,
-// claimed (single-use) by POST /api/answer.
+// The pending dashboard_ask questions. The MCP tool handler registers them.
+// POST /api/answer claims them (single-use).
 const asks = createAskRegistry()
 
 // ---- HTTP server (lazy bind) -----------------------------------------------
@@ -130,10 +134,11 @@ function dashboardUrl(): string {
   return `http://127.0.0.1:${boundPort}/?session=${SESSION_ID}&token=${TOKEN}`
 }
 
-// Persist the URL (with its capability token) to a known file so /sdd:start can
-// just READ + print it — no MCP tool call, no channel round-trip. The channel is
-// the one thing that differs from a plain tool; keeping it out of the start path
-// makes the handshake a file read, which can't perturb the session context.
+// Write the URL (with its capability token) to a known file. Then /sdd:start
+// can only READ and print it, with no MCP tool call and no channel round-trip.
+// The channel is the one thing that is different from a plain tool. If the start
+// path does not use the channel, the handshake is a file read. A file read cannot
+// change the session context.
 const URL_FILE = join(STATE_DIR, 'current.url')
 function writeUrlFile(): void {
   if (!boundPort) return
@@ -170,7 +175,7 @@ function ensureHttp(): number {
         websocket: {
           open(ws: WS) {
             clients.add(ws)
-            // Hydrate the new client with the current feature list.
+            // Send the current feature list to the new client.
             try {
               ws.send(
                 JSON.stringify({
@@ -186,7 +191,7 @@ function ensureHttp(): number {
             clients.delete(ws)
           },
           message() {
-            // The dashboard speaks to the server over HTTP, not WS — WS is push-only.
+            // The dashboard sends data to the server over HTTP, not WS. WS is push-only.
           },
         },
       })
@@ -269,15 +274,16 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         }
       }
       const port = ensureHttp()
-      writeUrlFile() // refresh with the just-handed-over project dir
-      docsWatcher.arm(abs) // project dir may have arrived (or changed) only now
+      writeUrlFile() // refresh with the new project dir from the handover
+      docsWatcher.arm(abs) // the project dir can arrive (or change) only now
       const url = dashboardUrl()
-      // NB: no inbound channel ping here. The channel is the one mechanism that
-      // differs from a plain MCP tool, and a proactive ping on /sdd:start was the
-      // suspected trigger for a session-context blow-up. Outbound is already
-      // proven by this tool result; the inbound path is exercised on the first
-      // real command. /sdd:start prefers reading current.url and never calls this
-      // tool when the project resolved at boot — so the common path is channel-free.
+      // NOTE: There is no inbound channel ping here. The channel is the one
+      // mechanism that is different from a plain MCP tool. We think that a
+      // proactive ping on /sdd:start caused an overflow of the session context.
+      // This tool result already proves the outbound path. The first real command
+      // tests the inbound path. /sdd:start reads current.url first. If the project
+      // resolved at boot, /sdd:start never calls this tool. Thus the usual path
+      // does not use the channel.
       broadcast({ type: 'project', project: abs })
       return {
         content: [
@@ -315,14 +321,15 @@ const transport = new StdioServerTransport()
 await mcp.connect(transport)
 log(`MCP connected (session ${SESSION_ID})`)
 
-// The MCP transport owns the stdin reader — when Claude Code closes the
+// The MCP transport owns the stdin reader. When Claude Code closes the
 // connection (stdin EOF), the transport closes. This is the most reliable
-// shutdown signal (more so than our own stdin listeners). Wire both.
+// shutdown signal, more reliable than our own stdin listeners. Connect both.
 transport.onclose = () => shutdown()
 mcp.onclose = () => shutdown()
 
-// If the project resolved at boot AND the dashboard is enabled, bind HTTP now so
-// the listener is up before any command. Otherwise /sdd:start binds it lazily.
+// If the project resolved at boot AND the dashboard is enabled, bind HTTP now.
+// Then the listener is ready before the first command. If not, /sdd:start binds
+// it lazily.
 try {
   const cfg = readConfig()
   if (getProjectDir() && cfg.enabled) {
@@ -362,8 +369,8 @@ process.on('SIGTERM', shutdown)
 process.on('SIGINT', shutdown)
 process.on('SIGHUP', shutdown)
 
-// Orphan watchdog: stdin events don't reliably fire when the parent chain is
-// severed by a crash. Poll for reparenting (POSIX) or a dead stdin pipe.
+// Orphan watchdog: if a crash breaks the parent chain, the stdin events do not
+// always fire. Poll for a new parent (POSIX) or a dead stdin pipe.
 const bootPpid = process.ppid
 setInterval(() => {
   const orphaned =

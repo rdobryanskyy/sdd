@@ -1,7 +1,7 @@
 /* SDD dashboard — vanilla JS, READ-ONLY over docs/features/. It renders the
-   pipeline + artifacts off disk and drives the pipeline back into the live
-   Claude session (validated /sdd: commands). All edits happen through the
-   pipeline in the terminal — the dashboard never writes artifact text. */
+   pipeline + artifacts from the disk. It also sends validated /sdd: commands
+   back to the live Claude session to control the pipeline. All edits occur
+   through the pipeline in the terminal. The dashboard never writes artifact text. */
 'use strict';
 
 const qs = new URLSearchParams(location.search);
@@ -79,7 +79,7 @@ function connectWs() {
     const isReconnect = wsRetry > 0; // read before reset
     wsRetry = 0;
     setConn(true, 'connected');
-    if (isReconnect) refresh(); // full re-sync — frames missed while disconnected
+    if (isReconnect) refresh(); // full re-sync, for the frames that we missed while disconnected
   };
   ws.onclose = () => {
     setConn(false, 'disconnected');
@@ -106,7 +106,7 @@ function onFrame(f) {
       break;
     case 'command':
       logLine('command', `→ queued ${f.command}`);
-      // Another tab (or a race with our own POST) queued it — track it too.
+      // Another tab (or a race with our own POST) queued it. Track it too.
       if (f.request_id && !state.runs.has(f.request_id)) {
         state.runs.set(f.request_id, { slug: f.slug, command: f.command, phase: 'queued' });
         renderRuns();
@@ -153,9 +153,9 @@ function renderRuns() {
   }
 }
 
-// The dashboard_update/done frames carry a slug but no request_id (Claude does
-// not know it), so queued→running→done correlation is by slug — approximate,
-// but honest for the common one-run-per-feature case.
+// The dashboard_update/done frames have a slug but no request_id, because Claude
+// does not know the request_id. Thus the queued→running→done correlation uses the
+// slug. It is approximate, but correct for the usual case of one run per feature.
 function findRun(phase, slug) {
   return [...state.runs.entries()].find(
     ([, r]) => r.phase === phase && (!slug || !r.slug || r.slug === slug),
@@ -163,7 +163,7 @@ function findRun(phase, slug) {
 }
 
 function markRunning(slug) {
-  if (findRun('running', slug)) return; // already tracking one for this slug
+  if (findRun('running', slug)) return; // a run for this slug is already tracked
   const entry = findRun('queued', slug);
   if (!entry) return;
   entry[1].phase = 'running';
@@ -449,7 +449,7 @@ function renderArtifact() {
     return;
   }
   if (a.kind === 'text' || a.kind === 'openapi') {
-    // openapi renders as plain yaml — no in-browser API console
+    // openapi shows as plain yaml, with no API console in the browser
     const pre = document.createElement('pre');
     pre.className = 'raw';
     pre.textContent = a.raw;
@@ -461,9 +461,9 @@ function renderArtifact() {
 }
 
 function stripFrontmatter(md) {
-  // A leading --- … --- YAML block renders as a setext h2 under marked
-  // (text + a line of --- = heading). The frontmatter is already shown as
-  // badges, so drop it before rendering.
+  // marked renders a leading --- … --- YAML block as a setext h2
+  // (text + a line of --- = heading). The badges already show the
+  // frontmatter, so remove it before the render.
   if (!md.startsWith('---')) return md;
   const end = md.indexOf('\n---', 3);
   if (end === -1) return md;
@@ -483,8 +483,8 @@ function renderMarkdown(md, viewer) {
   renderMermaidIn(div);
 }
 
-// Mermaid is 3.3 MB — load it only when a rendered artifact actually contains a
-// ```mermaid block (same lazy pattern the OpenAPI renderer used to follow).
+// Mermaid is 3.3 MB. Load it only when a rendered artifact contains a ```mermaid
+// block. The OpenAPI renderer used the same lazy pattern before.
 let mermaidLoading = null;
 function loadMermaid() {
   if (window.mermaid) return Promise.resolve();
@@ -545,7 +545,7 @@ async function refresh(slug) {
   await loadFeatures();
   if (state.slug && (!slug || slug === state.slug)) {
     await loadDetail(state.slug);
-    // keep the open artifact in sync if Claude rewrote it
+    // if Claude rewrote the open artifact, keep it in sync
     if (state.artifact) {
       const still = state.detail.artifacts.find((x) => x.path === state.artifact.path);
       if (still) await openArtifact(still);
@@ -615,8 +615,8 @@ async function showRoadmap() {
     }
     const actions = document.createElement('div');
     actions.className = 'modal-actions';
-    // Repo-wide runs: the allowlist wants a slug, so pass the skill name as the
-    // hint argument — the roadmap/survey skills tolerate it.
+    // Repo-wide runs: the allowlist must have a slug, so give the skill name as
+    // the hint argument. The roadmap/survey skills accept it.
     const runBtn = (label, skill, title) => {
       const b = document.createElement('button');
       b.className = 'ghost small';

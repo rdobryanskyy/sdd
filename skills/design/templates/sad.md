@@ -10,18 +10,18 @@ target_surfaces: []  # filled in §4 — subset of: backend-service | web-fronte
 # Software Architecture Document — <slug>
 
 <!-- 12 Arc42 sections. Empty section → <!-- N/A: <one-line reason> -->. -->
-<!-- C4 Context (L1) lives inline in §3. C4 Container (L2) lives inline in §5. -->
-<!-- Numbers in §10 come VERBATIM from spec.md §6 NFR — no inventing, no rounding. -->
+<!-- C4 Context (L1) is inline in §3. C4 Container (L2) is inline in §5. -->
+<!-- Numbers in §10 come VERBATIM from spec.md §6 NFR. Do not invent or round numbers. -->
 
 ## 1. Introduction and goals
 
-<!-- 🎯 Why: durable memory of «what + the three dominant qualities + who cares». A year from
-     now nobody recalls which three qualities were critical for this system.
+<!-- 🎯 Why: a durable record of «what + the three dominant qualities + who is interested». After a year,
+     nobody remembers which three qualities were critical for this system.
      📋 Write: 1 ¶ intent + 3 lines of top-3 quality goals + a stakeholders table.
-     ¶4 is the override slot — critic `Override` resolutions emit «Decision override: <headline>
-     — rationale: <reason>» bullets here so downstream skills see the deliberate choice. -->
+     ¶4 is the override slot. Critic `Override` resolutions write «Decision override: <headline>
+     — rationale: <reason>» bullets here. Then downstream skills see the deliberate choice. -->
 
-**Intent.** <One paragraph from spec §2 Goals — what we're building and for whom.>
+**Intent.** <One paragraph from spec §2 Goals — what we build and for whom.>
 
 **Top-3 quality goals (1-liners; full scenarios in §10):**
 
@@ -37,15 +37,15 @@ target_surfaces: []  # filled in §4 — subset of: backend-service | web-fronte
 | <consumer role from glossary> | <read usage> | No |
 | Tech Lead | SAD approval | Yes |
 
-<!-- Decision overrides (¶4) — populated by the critic resolution loop, empty otherwise. -->
+<!-- Decision overrides (¶4) — the critic resolution loop fills them. Else, this stays empty. -->
 
 ## 2. Constraints
 
-<!-- 🎯 Why: §4 strategy only works when §2 has fixed WHAT IS ALREADY FIXED — stack, versions,
+<!-- 🎯 Why: the §4 strategy works only when §2 records WHAT IS ALREADY FIXED — stack, versions,
      deadline, regulatory. This is an input, not an output.
      📋 Write: four blocks — Technical / Organisational / Conventions / Regulatory.
-     📌 Pin versions («<datastore> 18», not «<datastore>»); «Q3 deadline — hard», not «ideally».
-     Never N/A — every feature inherits at least Conventions + Technical. -->
+     📌 Pin versions («<datastore> 18», not «<datastore>»). Write «Q3 deadline — hard», not «ideally».
+     Never N/A — each feature gets at least Conventions + Technical from the repo. -->
 
 **Technical.**
 - <Language + version>
@@ -68,12 +68,12 @@ target_surfaces: []  # filled in §4 — subset of: backend-service | web-fronte
 
 ## 3. Context and scope
 
-<!-- 🎯 Why: draws the SYSTEM BOUNDARY — who talks to it from outside, where the trust zone ends.
-     Without §3, §5 and §8 (authorization) blur — unclear what's «inside» vs «outside».
+<!-- 🎯 Why: shows the SYSTEM BOUNDARY — who talks to it from outside, and where the trust zone ends.
+     Without §3, §5 and §8 (authorization) are not clear. Nobody knows what is «inside» vs «outside».
      📋 Write: 2–3 sentences of business context + an external-systems table + a C4Context block.
-     📌 «External: none (deliberate, no third-party in v1)» is itself a decision worth stating.
-     Trust boundary — the line past which you don't trust data without checking it.
-     Never N/A — greenfield still draws the planned actors + external systems. -->
+     📌 «External: none (deliberate, no third-party in v1)» is also a decision. Write it.
+     Trust boundary — the line after which you do not trust data without a check.
+     Never N/A — a greenfield also draws the planned actors + external systems. -->
 
 <Business context in 2–3 sentences. What the system does for whom.>
 
@@ -103,11 +103,11 @@ C4Context
 
 ## 4. Solution strategy
 
-<!-- 🎯 Why: the 3–4 STRATEGIC PILLARS every ADR grows from. Without §4 each ADR looks random —
-     there's no umbrella. ⭐ The densest section — the blast-radius gate fires almost always here
-     (decisions are irreversible + multi-module).
-     📋 Write: 3–4 choices; each a heading + 2–3 sentences of rationale.
-     📌 «Store content as a table of typed blocks» is a pillar — ADR-0001 grows from it. -->
+<!-- 🎯 Why: the 3–4 STRATEGIC PILLARS that each ADR comes from. Without §4, each ADR looks random,
+     because there is no umbrella. ⭐ The densest section. The blast-radius gate almost always fires here
+     (the decisions are irreversible + multi-module).
+     📋 Write: 3–4 choices. Give each a heading + 2–3 sentences of rationale.
+     📌 «Store content as a table of typed blocks» is a pillar. ADR-0001 comes from it. -->
 
 **Top strategic choices (the seeds for ADRs):**
 
@@ -115,18 +115,18 @@ C4Context
 2. **<e.g. Single-store persistence>** — <2–3 sentences>.
 3. **<e.g. Server-rendered read side>** — <2–3 sentences>.
 
-Each tactical decision in later sections should trace to one of these seeds. Tactical decisions that *contradict* a strategic choice are red flags — surface them in §11.
+Each tactical decision in later sections must trace to one of these seeds. A tactical decision that *contradicts* a strategic choice is a red flag. Show it in §11.
 
 ## 5. Building block view
 
 <!-- 🎯 Why: INTERNAL DECOMPOSITION — modules, containers, datastores. The static topology: who
-     may talk to whom. Without §5, §6 (the flows) has no vocabulary of participants.
-     📋 Write: 1 ¶ on the style (layered / hexagonal / clean / event-driven) + a folder tree + a
+     can talk to whom. Without §5, §6 (the flows) has no vocabulary of participants.
+     📋 Write: 1 ¶ about the style (layered / hexagonal / clean / event-driven) + a folder tree + a
      C4Container block.
-     📌 Draw ONE Container per declared `target_surface` (frontmatter): a fullstack
-     [backend-service, web-frontend] = a backend-API container + a web/SPA container; a
+     📌 Draw ONE Container for each declared `target_surface` (frontmatter). A fullstack
+     [backend-service, web-frontend] = a backend-API container + a web/SPA container. A
      [backend-service, mobile-app] = the API + the mobile app. The Container(web, …) line below is
-     just one surface's container — swap/add per what was declared in §4. → _shared/surfaces.md
+     only the container of one surface. Replace or add containers for the surfaces that §4 declared. → _shared/surfaces.md
      📌 e.g. «web app, content API, media worker, datastore, object store, CDN». -->
 
 <One paragraph: layered / hexagonal / clean / event-driven, and why.>
@@ -142,7 +142,7 @@ Each tactical decision in later sections should trace to one of these seeds. Tac
 └── wiring        <self-wiring entry point>
 ```
 
-**C4 Container (L2):** <!-- syntax → references/c4-mermaid-syntax.md. Real names, no <placeholder> stubs. ONE Container per declared target_surface (frontmatter); the web container below is one example surface. -->
+**C4 Container (L2):** <!-- syntax → references/c4-mermaid-syntax.md. Real names, no <placeholder> stubs. ONE Container for each declared target_surface (frontmatter). The web container below is one example surface. -->
 
 ```mermaid
 C4Container
@@ -166,13 +166,13 @@ C4Container
 
 ## 6. Runtime view
 
-<!-- 🎯 Why: the RUNTIME FLOW of 1–2 critical scenarios — who talks to whom, when, in what order.
-     Without §6, §5 is just boxes with no life.
-     📋 Write: a Mermaid sequenceDiagram. Participants are names from §5 (don't invent new ones).
-     Messages are semantic («saves a draft»), NO HTTP verbs / paths / status codes — endpoint-level
-     sequences arrive at the `api` stage.
-     📌 e.g. «author → web: composes draft → web → content API: save». Seed the primary flow(s) here;
-     the `sequences` stage then covers every §5 AC (no cap). Never N/A for M+; XS/S keeps ≥1 happy-path flow. -->
+<!-- 🎯 Why: the RUNTIME FLOW of 1–2 critical scenarios — who talks to whom, when, in what sequence.
+     Without §6, §5 is only static boxes.
+     📋 Write: a Mermaid sequenceDiagram. The participants are names from §5 (do not invent new names).
+     The messages are semantic («saves a draft»). Use NO HTTP verbs / paths / status codes. The `api` stage
+     adds endpoint-level sequences.
+     📌 e.g. «author → web: composes draft → web → content API: save». Seed the primary flow(s) here.
+     The `sequences` stage then covers each §5 AC (no cap). Never N/A for M+. XS/S keeps ≥1 happy-path flow. -->
 
 **Critical flow 1: <flow name>**
 
@@ -190,15 +190,15 @@ sequenceDiagram
     Web-->>Actor: confirmation
 ```
 
-**Critical flow 2: <e.g. async event propagation>** — <if applicable, otherwise N/A>.
+**Critical flow 2: <e.g. async event propagation>** — <if applicable, else N/A>.
 
 ## 7. Deployment view
 
-<!-- 🎯 Why: the TOPOLOGY DevOps must know without reading the deploy charts — how many replicas,
-     where the background worker lives, AT WHAT NUMBERS we scale.
-     📋 Write: 2–3 sentences on topology + monitoring + concrete threshold numbers.
+<!-- 🎯 Why: the TOPOLOGY that DevOps must know without the deploy charts — how many replicas,
+     where the background worker runs, AT WHAT NUMBERS we scale.
+     📋 Write: 2–3 sentences about topology + monitoring + concrete threshold numbers.
      📌 e.g. «500 authors → partition by quarter» (not «we'll think about scale later»).
-     🎯 N/A allowed for XS/S that reuses an existing deployment unit with no change.
+     🎯 N/A is permitted for XS/S that uses an existing deployment unit again with no change.
      Deployment-diagram scaffold → templates/deployment.md. -->
 
 <Topology in 2–3 sentences. Where it runs, replicas, scaling thresholds.>
@@ -216,10 +216,10 @@ sequenceDiagram
 
 ## 8. Crosscutting concepts
 
-<!-- 🎯 Why: CROSS-CUTTING PATTERNS spanning several modules: logging, errors, authorization, ID
-     strategy, events, caching. ⭐ The second-densest section. A pattern inside one module is NOT
-     here; a project-wide convention belongs in the convention file.
-     📋 Write: a table — concept / convention / where defined. One row per concept.
+<!-- 🎯 Why: CROSS-CUTTING PATTERNS across many modules: logging, errors, authorization, ID
+     strategy, events, caching. ⭐ The second-densest section. A pattern in one module is NOT
+     here. A project-wide convention goes in the convention file.
+     📋 Write: a table — concept / convention / where defined. One row for each concept.
      📌 e.g. «sortable time-based IDs generated in the app layer» as a default from the convention file. -->
 
 | Concept | Convention | Where defined |
@@ -234,9 +234,9 @@ sequenceDiagram
 
 ## 9. Architecture decisions
 
-<!-- 🎯 Why: the REVERSE INDEX onto the adr/ folder. `ls adr/` gives the files; §9 gives the
-     semantics — why they exist, which SAD section they attach to, what status.
-     📋 Write: a 4-column table, one row per ADR. Mixed status is fine.
+<!-- 🎯 Why: the REVERSE INDEX of the adr/ folder. `ls adr/` gives the files. §9 gives the
+     semantics — why they exist, which SAD section they attach to, and their status.
+     📋 Write: a 4-column table, one row for each ADR. Mixed status is correct.
      📌 e.g. «0001 | Store content as a table of typed blocks | Accepted | §4». -->
 
 | # | Title | Status | Section |
@@ -244,18 +244,18 @@ sequenceDiagram
 | <NNNN> | <imperative — e.g. "Use a sliding-window counter for rate limiting"> | Accepted | §<N> |
 | <NNNN> | <imperative — e.g. "Co-locate the worker in the API process"> | Accepted | §<N> |
 
-ADR files live under `docs/features/<slug>/adr/NNNN-<title>.md`.
+The ADR files are in `docs/features/<slug>/adr/NNNN-<title>.md`.
 
 ## 10. Quality requirements
 
-<!-- 🎯 Why: the QUALITY TREE — take a goal from §1 and break it into concrete leaves: tests,
-     metrics, configs, drills. ⭐ Without §10, §1 is a manifesto. With §10 each declaration maps
-     to something PROVABLE.
-     📋 Write: per §1 goal — When / Then / How-verify. Numbers from spec §6 NFR VERBATIM (don't
-     round ≤250ms to ≤300ms — that's a critic F6 hit).
+<!-- 🎯 Why: the QUALITY TREE. Take a goal from §1 and divide it into concrete leaves: tests,
+     metrics, configs, drills. ⭐ Without §10, §1 is only a manifesto. With §10, each declaration maps
+     to an item that you can PROVE.
+     📋 Write: for each §1 goal — When / Then / How-verify. Copy numbers from spec §6 NFR VERBATIM (do not
+     round ≤250ms to ≤300ms — that is a critic F6 hit).
      📌 e.g. «p95 ≤ 500 ms on a block update, verified by a 100 req/s load test». -->
 
-Each top-3 goal from §1 expanded into a full scenario:
+Expand each top-3 goal from §1 into a full scenario:
 
 **QG-1. <quality attribute>**
 - **When:** <trigger condition>
@@ -274,13 +274,13 @@ Each top-3 goal from §1 expanded into a full scenario:
 
 ## 11. Risks and technical debt
 
-<!-- 🎯 Why: ⭐ collects EVERYTHING that can break — not only the technical. Without §11 risks get
-     discussed at standups and lost; debt lives only in the head of whoever accepted it.
-     📋 Write: a risk/debt table — severity — mitigation — owner. Accepted debt in its own block.
-     📌 The first risk is often a product risk, not a technical one. That's normal. -->
+<!-- 🎯 Why: ⭐ records ALL items that can break — not only the technical items. Without §11, the team
+     discusses risks at standups and then loses them. The debt is only in the memory of the person who accepted it.
+     📋 Write: a risk/debt table — severity — mitigation — owner. Put accepted debt in its own block.
+     📌 The first risk is frequently a product risk, not a technical risk. That is normal. -->
 
-<!-- Severity literals: Low / Medium / High for regular risks; "Open question" for rows created by
-     a Save-as-OQ resolution during the Socratic walk (see references/socratic.md). -->
+<!-- Severity literals: Low / Medium / High for regular risks. "Open question" for rows that
+     a Save-as-OQ resolution creates during the Socratic walk (see references/socratic.md). -->
 
 | Risk / debt | Severity | Mitigation | Owner |
 |---|---|---|---|
@@ -293,9 +293,9 @@ Each top-3 goal from §1 expanded into a full scenario:
 
 ## 12. Glossary
 
-<!-- 🎯 Why: ⭐ the DOMAIN GLOSSARY that ends arguments a year later («checkpoint — weekly or
+<!-- 🎯 Why: ⭐ the DOMAIN GLOSSARY that stops arguments a year later («checkpoint — weekly or
      biweekly? quarter — calendar or fiscal?»).
-     📋 Write: a term / meaning table. Business + technical terms mixed.
+     📋 Write: a term / meaning table. Mix business + technical terms.
      📌 e.g. «Lesson | a unit inside a course made of blocks (text, video)». -->
 
 | Term | Meaning |

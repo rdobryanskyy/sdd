@@ -1,4 +1,4 @@
-<!-- PR body scaffold. Forge-agnostic — same body for `gh pr create --body-file` or `glab mr create --description`. -->
+<!-- PR body scaffold. It does not depend on the forge. Use the same body for `gh pr create --body-file` or `glab mr create --description`. Write English prose in ASD-STE100. -->
 
 ## Summary
 

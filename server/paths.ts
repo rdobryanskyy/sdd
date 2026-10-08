@@ -1,22 +1,24 @@
 /**
- * Path scoping + project-root discovery for the SDD dashboard server.
+ * Path scope and project-root discovery for the SDD dashboard server.
  *
- * The MCP server is launched with `--cwd ${CLAUDE_PLUGIN_ROOT}/server`, so
- * `process.cwd()` is the PLUGIN dir, never the project. Every read/write must be
- * proven to live under `<PROJECT>/docs/` before it touches disk — the inverse of
- * the Telegram channel's `assertSendable` (it refuses to LEAK its own state; we
- * refuse to TOUCH anything outside the project's docs tree).
+ * The MCP server starts with `--cwd ${CLAUDE_PLUGIN_ROOT}/server`. Thus
+ * `process.cwd()` is the PLUGIN dir, never the project. Before a read or a write
+ * touches the disk, the code must prove that the path is under `<PROJECT>/docs/`.
+ * This is the inverse of `assertSendable` in the Telegram channel. That function
+ * refuses to LEAK its own state. This code refuses to TOUCH anything outside the
+ * docs tree of the project.
  */
 
 import { realpathSync, existsSync, statSync } from 'fs'
 import { join, resolve, sep, dirname, basename, normalize, isAbsolute } from 'path'
 
-// The plugin's own root — `--cwd <plugin>/server`, so the plugin dir is one up.
-// We hard-refuse to ever resolve THIS as the project (the critical trap: reading
-// the plugin's own docs/ instead of the user's).
+// The root of the plugin itself. The server starts with `--cwd <plugin>/server`,
+// thus the plugin dir is one level up. We always refuse to resolve THIS dir as the
+// project. The critical trap is to read the docs/ of the plugin instead of the
+// docs/ of the user.
 const PLUGIN_ROOT = resolve(import.meta.dir, '..')
 
-/** Files we will read/serve as artifacts. `.size` is matched by basename, not extname. */
+/** The files that we read and serve as artifacts. We match `.size` by basename, not by extname. */
 export const ALLOWED_EXT = new Set(['.md', '.yaml', '.yml', '.json'])
 const ALLOWED_BASENAMES = new Set(['.size'])
 
@@ -34,7 +36,7 @@ function isPluginRoot(dir: string): boolean {
   }
 }
 
-/** Walk up from `start` looking for a dir that has `docs/` or `.git` and is not the plugin. */
+/** Go up from `start` to find a dir that has `docs/` or `.git` and is not the plugin. */
 function walkUp(start: string): string | null {
   let dir = resolve(start)
   for (let i = 0; i < 40; i++) {
@@ -47,14 +49,14 @@ function walkUp(start: string): string | null {
 }
 
 /**
- * Resolution order (the plan's contract):
+ * The resolution order (the contract of the plan):
  *   1. process.env.CLAUDE_PROJECT_DIR  (Claude Code sets this for the session)
- *   2. an explicit handover from /sdd:start (setProjectDir — authoritative, wins)
- *   3. upward walk from cwd for docs/ or .git
- *   4. null → callers hard-refuse with a clear message
+ *   2. an explicit handover from /sdd:start (setProjectDir — it has authority and wins)
+ *   3. an upward walk from cwd to find docs/ or .git
+ *   4. null → the callers refuse with a clear message
  *
- * (2) is applied by setProjectDir() overriding whatever boot resolved. This
- * function computes the BOOT default — env first, then walk.
+ * setProjectDir() applies (2). It overrides the value that the boot resolved.
+ * This function calculates the BOOT default: first the env, then the walk.
  */
 function resolveBootDir(): string | null {
   const env = process.env.CLAUDE_PROJECT_DIR
@@ -66,7 +68,7 @@ function resolveBootDir(): string | null {
 
 PROJECT_DIR = resolveBootDir()
 
-/** The authoritative handover from /sdd:start (runs in-session where cwd IS the project). */
+/** The handover from /sdd:start, which has authority. It runs in the session, where cwd IS the project. */
 export function setProjectDir(dir: string): string {
   const abs = resolve(dir)
   if (!existsSync(abs)) throw new Error(`project dir does not exist: ${abs}`)
@@ -84,7 +86,7 @@ export function getProjectDir(): string | null {
   return PROJECT_DIR
 }
 
-/** Throw a uniform "where's the project" error for endpoints that need it. */
+/** Throw a uniform "where's the project" error for the endpoints that must have a project. */
 export function requireProjectDir(): string {
   if (!PROJECT_DIR) {
     throw new Error(
@@ -109,19 +111,21 @@ export function isValidSlug(slug: string): boolean {
 }
 
 /**
- * Resolve `<docs>/features/<slug>/<relPath>` (or a docs-root file when slug is
- * null, e.g. roadmap.md), then PROVE the realpath is contained in docs/, carries
- * an allowed extension, and is not under .git. Returns the absolute path to use.
+ * Resolve `<docs>/features/<slug>/<relPath>`. If slug is null, resolve a file in
+ * the docs root, for example roadmap.md. Then PROVE three things about the
+ * realpath: it is in docs/, it has an allowed extension, and it is not under .git.
+ * Return the absolute path to use.
  *
- * Containment is checked on the realpath so a symlink escaping docs/ is caught.
- * The API is read-only, so the artifact must already exist — a missing file is
- * `no such artifact`, never a write anchor.
+ * The containment check uses the realpath. Thus the check finds a symlink that
+ * goes out of docs/. The API is read-only, so the artifact must already exist.
+ * A missing file gives `no such artifact`. It is never an anchor for a write.
  */
 export function assertArtifactPath(slug: string | null, relPath: string): string {
   const docs = docsDir()
 
-  // Reject absolute paths and traversal up front (defence in depth — realpath is
-  // the real gate, but a clear early refusal beats a confusing one later).
+  // Reject absolute paths and traversal first. This is defense in depth. The
+  // realpath is the real gate, but a clear early refusal is better than an
+  // unclear refusal later.
   if (isAbsolute(relPath)) throw new Error(`artifact path must be relative: ${relPath}`)
   const clean = normalize(relPath)
   if (clean.startsWith('..') || clean.split(sep).includes('..')) {
@@ -143,7 +147,8 @@ export function assertArtifactPath(slug: string | null, relPath: string): string
     throw new Error(`extension not allowed: ${name}`)
   }
 
-  // Realpath containment. For a missing leaf, anchor on the (existing) parent.
+  // Realpath containment. If the leaf is missing, use the parent (which exists)
+  // as the anchor.
   let realDocs: string
   try {
     realDocs = realpathSync(docs)
@@ -158,8 +163,8 @@ export function assertArtifactPath(slug: string | null, relPath: string): string
   if (realTarget !== realDocs && !realTarget.startsWith(realDocs + sep)) {
     throw new Error(`path escapes docs/: ${relPath}`)
   }
-  // Never anything under a .git dir (defence in depth — .git lives outside docs/
-  // anyway, but a symlinked .git inside docs/ would be caught here).
+  // Never accept a path under a .git dir. This is defense in depth. The .git dir
+  // is usually outside docs/, but this check finds a symlinked .git in docs/.
   if (realTarget.split(sep).includes('.git')) {
     throw new Error(`refusing to touch .git: ${relPath}`)
   }
@@ -176,7 +181,7 @@ export function contentTypeFor(path: string): string {
   return 'text/plain; charset=utf-8'
 }
 
-/** True if `p` resolves inside the static dashboard dir (used by static-serve). */
+/** True if `p` resolves in the static dashboard dir. The static-serve code uses this function. */
 export function safeStaticPath(staticRoot: string, urlPath: string): string | null {
   const clean = normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, '')
   const target = resolve(staticRoot, '.' + sep + clean)

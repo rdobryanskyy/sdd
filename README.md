@@ -1,14 +1,20 @@
 # SDD — Spec-Driven Development for Claude Code
 
-A self-contained Claude Code plugin that carries a feature from a one-line idea to
-**reviewed, verified, shipped** code through **19 atomic, stack-agnostic skills** and a
-**TDD implementation engine** — with a living roadmap above the per-feature flow.
+SDD is a self-contained Claude Code plugin. It moves a feature from a one-line idea to
+**reviewed, verified, shipped** code. It uses **19 atomic, stack-agnostic skills** and a
+**TDD implementation engine**. A living roadmap sits above the per-feature flow.
 
-Every skill is Socratic (it walks decisions with you, it doesn't dump a wall of output),
-gated (a stage hard-refuses when its prerequisite artifact is missing), and stack-agnostic
-(no language, tracker, or test tool is hard-coded — the skills detect what your repo uses).
-The Q&A skills (`specify` / `clarify` / `design`) are also **depth-tunable** — an easy / medium / hard
-dial decides how much the skill decides for you vs. interrogates you with trade-offs.
+Each skill has three properties:
+
+- **Socratic.** The skill examines each decision with you. It does not give you a large block of output.
+- **Gated.** A stage hard-refuses when its prerequisite artifact is missing.
+- **Stack-agnostic.** The skills do not hard-code a language, a tracker or a test tool. They detect what your repo uses.
+
+The Q&A skills (`specify` / `clarify` / `design`) are also **depth-tunable**. An easy / medium / hard
+dial sets how many decisions the skill makes for you and how many trade-off questions it asks you.
+
+All English text of the plugin and of the artifacts that it writes obeys ASD-STE100 (Simplified
+Technical English). The full rule is in [`skills/_shared/ste100.md`](./skills/_shared/ste100.md).
 
 ## Install
 
@@ -19,62 +25,71 @@ dial decides how much the skill decides for you vs. interrogates you with trade-
 /plugin install sdd@sdd
 ```
 
-After updating to a new release: re-run `/plugin install sdd@sdd`, then `/reload-plugins`.
+After you update to a new release, run `/plugin install sdd@sdd` again. Then run `/reload-plugins`.
 
-**Codex CLI** — `cd` into your project first: the script installs into the **current directory**
-(`.agents/skills/` + `.codex/agents/`). Add `--global` after `codex` to install under `~` instead,
-or `--prefix DIR` to install under an arbitrary directory (useful for trying it out in a sandbox):
+**Codex CLI** — first, `cd` into your project. The script installs into the **current directory**
+(`.agents/skills/` + `.codex/agents/`). To install under `~`, add `--global` after `codex`.
+To install under a different directory, add `--prefix DIR`. This is useful for a test in a sandbox:
 
 ```sh
 cd your-project
 curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd/main/install.sh | bash -s -- codex
 ```
 
-Then restart codex (skills are discovered at session start) and type `$sdd-specify`.
+Then restart codex, because codex finds skills at session start. Type `$sdd-specify`.
 
-Alternative — the plugin marketplace. Note that `add` only **registers** the marketplace, it
-installs nothing by itself:
+Alternative — the plugin marketplace. The `add` command only **registers** the marketplace. It
+does not install a plugin:
 
 ```text
 codex plugin marketplace add rdobryanskyy/sdd
 ```
 
-then **inside codex** run `/plugins`, switch to the `sdd` marketplace tab and pick
-**Install plugin**. One naming nuance: the marketplace install registers the **original** skill
-names (`$specify`), while the installer script prefixes them — `$sdd-specify` — because bare
-names like `review` / `design` / `api` collide with generic skills. **Pick one of the two paths,
-not both** — they register different names for the same skills, so running both shows every
-skill twice. To undo the script install: re-run `install.sh codex --uninstall` from the same
-directory (or with the same `--global` / `--prefix`). To undo the marketplace install: `/plugins`
-→ the sdd tab → uninstall (or remove the `[plugins."sdd@…"]` entry from `~/.codex/config.toml`).
-The script warns when it detects a marketplace install already registered.
+Then, **inside codex**, run `/plugins`. Go to the `sdd` marketplace tab and select
+**Install plugin**.
 
-> **Windows note.** The installer is a bash script — run it from Git Bash or WSL. The directories
-> it writes (`.agents/`, `.codex/`, `.cursor/`) start with a dot, which Explorer hides by
-> default — enable «Hidden items» (or `dir /a`) to see them.
+The two paths register different skill names:
 
-**Cursor** (2.4+) — the same script; `cd` into your project first (installs into
-`.cursor/skills/` + `.cursor/agents/` of the current directory; `--global` for `~`,
-`--prefix DIR` for an arbitrary directory):
+- The marketplace install registers the **original** skill names (`$specify`).
+- The installer script adds a prefix to the names (`$sdd-specify`). The reason: bare names such as
+  `review` / `design` / `api` collide with generic skills.
+
+**Use only one of the two paths.** They register different names for the same skills. If you use
+both, each skill shows two times.
+
+- To remove the script install, run `install.sh codex --uninstall` again from the same directory
+  (or with the same `--global` / `--prefix`).
+- To remove the marketplace install, use `/plugins` → the sdd tab → uninstall. Alternatively, remove
+  the `[plugins."sdd@…"]` entry from `~/.codex/config.toml`.
+
+If the script finds a marketplace install that is already registered, it shows a warning.
+
+> **Windows note.** The installer is a bash script. Run it from Git Bash or WSL. The names of the
+> directories that it writes (`.agents/`, `.codex/`, `.cursor/`) start with a dot. Explorer hides
+> these directories by default. To see them, enable «Hidden items» (or use `dir /a`).
+
+**Cursor** (2.4+) — use the same script. First, `cd` into your project. The script installs into
+`.cursor/skills/` + `.cursor/agents/` of the current directory. Use `--global` for `~`, or
+`--prefix DIR` for a different directory:
 
 ```sh
 cd your-project
 curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd/main/install.sh | bash -s -- cursor
 ```
 
-Then restart Cursor (or run **Developer: Reload Window**) and invoke a stage by typing `/` in
-the chat and picking `sdd-specify`. (Cursor also reads `.agents/skills/`, so a Codex install is
-already visible to Cursor.) Once the plugin is listed on the Cursor marketplace, installing from
-the in-app marketplace panel works too — project- or user-scoped.
+Then restart Cursor (or run **Developer: Reload Window**). To start a stage, type `/` in the chat
+and select `sdd-specify`. Cursor also reads `.agents/skills/`, thus Cursor can also see a Codex install.
+When the Cursor marketplace lists the plugin, you can also install it from the in-app marketplace
+panel, with project scope or user scope.
 
-How every Claude-specific mechanism — `AskUserQuestion`, subagents, `/clear`, the implement
-engine modes — maps to Codex / Cursor is one table:
+One table shows how each Claude-specific mechanism maps to Codex / Cursor. These mechanisms are
+`AskUserQuestion`, subagents, `/clear` and the implement engine modes. The table is
 [`skills/_shared/tool-adapters.md`](./skills/_shared/tool-adapters.md).
 
 ## Start here
 
-The flow is a straight line: **each stage writes a file the next one reads.** Run them in order
-(the diagram + table are just below).
+The flow is a straight line: **each stage writes a file that the next stage reads.** Run the stages
+in sequence. The diagram and the table are below.
 
 ```text
 /sdd:survey                         ← once per repo: map an existing codebase, OR bootstrap an empty one
@@ -82,21 +97,33 @@ The flow is a straight line: **each stage writes a file the next one reads.** Ru
 /sdd:design … → /sdd:implement … → /sdd:review … → /sdd:ship
 ```
 
-Two things to know up front: **`survey` runs once per repo** — on an existing codebase it maps the
-current architecture to `docs/architecture-map.md` (every later stage reads it); on an empty repo it
-runs a short foundation session and scaffolds the skeleton ([detail below](#where-we-study-the-codebase--hold-the-current-architecture)).
-And **`specify` *creates* the spec** from a short interview — you bring the idea, not the document.
+Know these two facts before you start:
 
-From there you walk the backbone in order. Each step reads the previous step's file and
-refuses if it's missing, so you can't skip ahead by accident.
+- **`survey` runs one time for each repo.** On an existing codebase, it maps the current architecture
+  to `docs/architecture-map.md`. Each later stage reads this file. On an empty repo, it runs a short
+  foundation session and scaffolds the skeleton ([detail below](#where-we-study-the-codebase--hold-the-current-architecture)).
+- **`specify` *creates* the spec** from a short interview. You bring the idea, not the document.
 
-**Every stage ends with a copy-ready handoff block** ([`skills/_shared/handoff.md`](./skills/_shared/handoff.md)):
-*What I did* + *Review before continuing* (links to the files it wrote, so you can eyeball them at the
-gate) + *Run next* — **`/clear`**, then the next `/sdd:…` command in a fenced block you copy in one
-click. The `/clear` matters because each stage is gated and **re-reads its inputs from disk**, so it
-needs no carryover — clearing keeps the context small and stops one stage's chatter from drifting into
-the next. (Loop-backs are the exception — when `review` bounces back to `implement`, you stay in
-context to iterate; utilities make `/clear` optional.) It looks like this:
+After that, do the backbone stages in sequence. Each step reads the file of the previous step. If
+that file is missing, the step refuses. Thus, you cannot skip a stage by accident.
+
+**Each stage ends with a handoff block that you can copy** ([`skills/_shared/handoff.md`](./skills/_shared/handoff.md)).
+The block has three parts:
+
+- *What I did*.
+- *Review before continuing*. This part links to the files that the stage wrote. You can examine
+  them at the gate.
+- *Run next*. This part gives **`/clear`**, and then the next `/sdd:…` command in a fenced block.
+  You can copy the command with one click.
+
+The `/clear` is important. Each stage is gated and **reads its inputs from disk again**, thus it
+does not need context from the previous stage. The `/clear` keeps the context small. It also stops
+the conversation of one stage from going into the next stage. There are two exceptions:
+
+- Loop-backs. When `review` sends the work back to `implement`, stay in the context and iterate.
+- Utilities. For utilities, `/clear` is optional.
+
+The block looks like this:
 
 ```md
 ## ✅ specify — checkout-discounts
@@ -114,9 +141,11 @@ context to iterate; utilities make `/clear` optional.) It looks like this:
 
 ## The flow
 
-There are three kinds of skill. Most of your time is the **backbone** — a straight line you
-walk in order. A few are **utilities** you call whenever you need them. Two **close the loop**
-after the code is written.
+There are three types of skill:
+
+- The **backbone** skills are a straight line that you do in sequence. You use most of your time here.
+- The **utilities** are skills that you use when you need them.
+- Two skills **close the loop** after the code is written.
 
 ```mermaid
 flowchart LR
@@ -140,178 +169,210 @@ flowchart LR
 
 | # | Skill | What it does | Reads → Produces |
 |---|---|---|---|
-| 0 | **survey** | Existing repo → scans once, persists the current architecture. Empty repo → level-adaptive foundation session → fixes the foundation + emits a scaffold `tasks.json` for `implement`. | the repo → `docs/architecture-map.md` (+ scaffold `tasks.json` on greenfield) |
+| 0 | **survey** | Existing repo → scans one time and keeps a record of the current architecture. Empty repo → level-adaptive foundation session → sets the foundation and writes a scaffold `tasks.json` for `implement`. | the repo → `docs/architecture-map.md` (+ scaffold `tasks.json` on greenfield) |
 
 ### Backbone — the straight line (run in order)
 
 | # | Skill | What it does | Reads → Produces |
 |---|---|---|---|
-| 1 | **specify** | Interviews you to capture the idea, writes the product spec + acceptance criteria (reads the architecture map for constraints) | *your idea*, `architecture-map.md` → `spec.md` |
-| 2 | **clarify** | Sweeps the spec for ambiguities (a devil's-advocate pass), closes or defers each | `spec.md` → tightened `spec.md` |
-| 3 | **design** | **Matches the feature to your existing architecture** (see below) + **declares the target surfaces**, writes the Arc42 SAD + C4 + ADRs | `spec.md` (+ `CONTEXT.md` if present) → `sad.md`, `adr/*` |
-| 4 | **sequences** | Draws the runtime flows as Mermaid sequence diagrams | `sad.md` → `sad.md §6` |
-| 5 | **data-model** | Designs the schema and writes the actual forward+rollback migrations — **staged** under the feature folder, not the live tree (`implement` promotes them) | `spec.md`, `sad.md`, sequences → `data-model.md`, staged `migrations/*.up/down.sql` |
-| 6 | **api** | Derives the OpenAPI contract from the data model (or the existing schema on the fast lane) + sequences + spec | `data-model.md`, sequences, `spec.md` → `contracts/openapi.yaml` |
-| 7 | **tasks** | Breaks the work into atomic ≤1-day tasks + a `tasks.json` dependency DAG | all of the above → `tasks/*`, **`tasks.json`** |
-| 8 | **plan-tests** | Maps every acceptance criterion to ≥1 test (inline in the spec for XS/S) | `spec.md`, `data-model.md` → `test-plan.md` (M+) or an inline `## Test plan` in `spec.md` (XS/S) |
-| 9 | **implement** | The TDD engine: writes a failing test, makes it pass, gates, commits — per task; **promotes** each staged migration into the live `migrations/` as it builds | `tasks.json` + all artifacts → code + tests + promoted migrations, committed |
+| 1 | **specify** | Interviews you to record the idea. Writes the product spec + acceptance criteria. Reads the architecture map for constraints. | *your idea*, `architecture-map.md` → `spec.md` |
+| 2 | **clarify** | Examines the spec for ambiguities (a devil's-advocate pass). Closes or defers each ambiguity. | `spec.md` → tightened `spec.md` |
+| 3 | **design** | **Matches the feature to your existing architecture** (see below) + **declares the target surfaces**. Writes the Arc42 SAD + C4 + ADRs. | `spec.md` (+ `CONTEXT.md` if present) → `sad.md`, `adr/*` |
+| 4 | **sequences** | Draws the runtime flows as Mermaid sequence diagrams. | `sad.md` → `sad.md §6` |
+| 5 | **data-model** | Designs the schema and writes the real forward+rollback migrations. The migrations are **staged** under the feature folder, not in the live tree (`implement` promotes them). | `spec.md`, `sad.md`, sequences → `data-model.md`, staged `migrations/*.up/down.sql` |
+| 6 | **api** | Derives the OpenAPI contract from the data model (or from the existing schema on the fast lane) + sequences + spec. | `data-model.md`, sequences, `spec.md` → `contracts/openapi.yaml` |
+| 7 | **tasks** | Divides the work into atomic tasks of ≤1 day + a `tasks.json` dependency DAG. | all of the above → `tasks/*`, **`tasks.json`** |
+| 8 | **plan-tests** | Maps each acceptance criterion to ≥1 test (inline in the spec for XS/S). | `spec.md`, `data-model.md` → `test-plan.md` (M+) or an inline `## Test plan` in `spec.md` (XS/S) |
+| 9 | **implement** | The TDD engine. For each task, it writes a failing test, makes it pass, runs the gate and commits. It **promotes** each staged migration into the live `migrations/` when it builds the task. | `tasks.json` + all artifacts → code + tests + promoted migrations, committed |
 
 ### Close the loop (after the code is written)
 
 | # | Skill | What it does | Reads → Produces |
 |---|---|---|---|
-| 10 | **review** | An **independent, clean-context** code review of the *whole* change against spec/AC + quality | the diff + `spec.md` → review record, `PASS` / `CHANGES REQUESTED` |
-| 11 | **ship** | **Verifies the feature actually runs** (not just green tests), writes the changelog, opens the PR | the reviewed change → changelog + PR (never auto-merges) |
+| 10 | **review** | An **independent, clean-context** code review of the *whole* change against spec/AC + quality. | the diff + `spec.md` → review record, `PASS` / `CHANGES REQUESTED` |
+| 11 | **ship** | **Makes sure that the feature really runs** (not only green tests). Writes the changelog and opens the PR. | the reviewed change → changelog + PR (never auto-merges) |
 
-`review` can bounce back to `implement` if it finds an unmet acceptance criterion. `ship` is the
-end: a reviewed, verified change with a changelog and an open PR — merging to main stays your call.
+If `review` finds an acceptance criterion that the change does not satisfy, it can send the work back
+to `implement`. `ship` is the end: a reviewed, verified change with a changelog and an open PR. You
+decide when to merge to main.
 
-> **"We test and review, right?"** Yes — in two places. `implement` runs a **per-task gate**
-> (unit + integration + lint + vet) on every task as it goes, so each task is green before it's
-> committed. Then `review` does the **independent, whole-change** code review a human reviewer
-> would do on the PR, and `ship` **runs the feature for real** against its acceptance criteria.
-> Tests-pass happens continuously inside `implement`; the cross-cutting review + real-world
-> verification are the explicit `review` and `ship` steps.
+> **"We test and review, right?"** Yes, in two places. First, `implement` runs a **per-task gate**
+> (unit + integration + lint + vet) on each task. Thus, each task is green before the commit. Then
+> `review` does the **independent, whole-change** code review that a human reviewer does on the PR.
+> After that, `ship` **runs the real feature** against its acceptance criteria. The tests run
+> continuously inside `implement`. The cross-cutting review and the real-world verification are the
+> explicit `review` and `ship` steps.
 
 ### Utilities — call whenever you need them (not part of the line)
 
-- **interview** *(before specify)* — stress-test a raw idea before you commit to a spec: a Socratic pass that surfaces hidden assumptions, names tradeoffs, and proposes sharper angles, ending with the weakest spot + the next step (usually `/sdd:specify`). Any idea, not just features; optional — reach for it when the idea itself isn't settled.
-- **classify-size** — size the feature XS/S/M/L/XL (writes `.size`); later skills read it to decide MVP vs full depth. Run it at the start, or any time scope changes.
-- **glossary** — capture a domain term in `CONTEXT.md` with a definition. Run it whenever a new term shows up; `design` and the spec read the glossary.
-- **decide-adr** — write a standalone ADR after the fact, when `tasks` (or a review) flags a decision that needs recording but wasn't captured during `design`.
-- **fix** — the **bugfix entry point**: reproduce, trace the symptom to the spec's acceptance
-  criteria (regression / ambiguous AC / uncovered gap), pin it with a failing test, apply the
-  minimal fix through the same gate `implement` runs, then patch the spec and write a fix record
-  under `_fixes/`. Works on a repo with no specs at all (fixes code-first, recommends `survey`).
+- **interview** *(before specify)* — tests a raw idea before you commit to a spec. It is a Socratic
+  pass that finds hidden assumptions, names trade-offs and gives better angles. At the end, it shows
+  the weakest point + the next step (usually `/sdd:specify`). It accepts any idea, not only features.
+  It is optional. Use it when the idea itself is not stable.
+- **classify-size** — sets the feature size XS/S/M/L/XL (writes `.size`). Later skills read it to
+  select MVP depth or full depth. Run it at the start, or when the scope changes.
+- **glossary** — records a domain term in `CONTEXT.md` with a definition. Run it when a new term
+  shows. `design` and the spec read the glossary.
+- **decide-adr** — writes a standalone ADR after the decision. Use it when `tasks` (or a review)
+  finds a decision that must have a record, but `design` did not record it.
+- **fix** — the **bugfix entry point**. It does these steps:
+  1. It reproduces the bug.
+  2. It traces the symptom to the acceptance criteria of the spec (regression / ambiguous AC / uncovered gap).
+  3. It pins the bug with a failing test.
+  4. It applies the minimal fix through the same gate that `implement` runs.
+  5. It patches the spec and writes a fix record under `_fixes/`.
+
+  It also works on a repo that has no specs (it fixes the code first and recommends `survey`).
 
 ## Interview depth (easy / medium / hard)
 
-The Q&A skills open by setting a **depth dial** — one `AskUserQuestion` per run that tunes how much
-the skill decides on its own vs. interrogates you. It changes *how many* questions you get, never
-*what gets covered*:
+The Q&A skills start with a **depth dial**. This is one `AskUserQuestion` for each run. It sets how
+many decisions the skill makes itself and how many questions it asks you. It changes *how many*
+questions you get. It never changes *what the skill covers*:
 
-- **easy** — the skill makes the reversible, low-stakes calls itself with sensible defaults, asks
-  only the irreversible / high-blast-radius ones, and **lists every assumption it made** so you can
-  veto. Minimal analyses; diagrams written + summarized (no per-item question).
-- **medium** (default) — the balanced Socratic walk: one question per real decision.
-- **hard** — walk every decision with the trade-off foregrounded, run the **full ideation analysis
-  suite** (competitive research, three strategic approaches, multi-perspective review,
-  devil's-advocate), and probe edge cases harder.
+- **easy** — the skill makes the reversible, low-risk decisions itself with sensible defaults. It
+  asks only about the irreversible decisions or the decisions with a high blast radius. It
+  **lists each assumption that it made**, so you can reject one. It does the minimum analyses. It
+  writes the diagrams and gives a summary (no question for each item).
+- **medium** (default) — the balanced Socratic walk: one question for each real decision.
+- **hard** — the skill examines each decision and shows the trade-off first. It runs the **full
+  suite of ideation analyses** (competitive research, three strategic approaches, multi-perspective
+  review, devil's-advocate). It also examines edge cases more carefully.
 
-The default is `interview_depth` in `.claude/sdd.local.md` (else medium); override it per run, or
-pass `--depth=easy|medium|hard`. Full semantics: [`skills/_shared/interview-depth.md`](./skills/_shared/interview-depth.md).
+The default is `interview_depth` in `.claude/sdd.local.md` (if it is not set, medium). You can
+override it for each run, or give `--depth=easy|medium|hard`. Full semantics: [`skills/_shared/interview-depth.md`](./skills/_shared/interview-depth.md).
 
-Two things the dial **never** weakens — they hold at every level:
+The dial **never** makes these two items weaker. They apply at each level:
 
-- **Readable diagrams.** `design` and `sequences` confirm each diagram **in prose** (a plain-language
-  walk of the flow + branches) and write the source to the file (where Obsidian renders it) — they
-  **never dump raw Mermaid into the terminal** as the thing to approve. If `mmdc` is installed, an
-  image is rendered too. ([`skills/_shared/diagram-presentation.md`](./skills/_shared/diagram-presentation.md))
-- **Full use-case + acceptance-criteria coverage.** Every spec §4 user story and §5 AC is covered
-  end-to-end: `specify` enforces a **use-case floor** (every user story carries ≥1 AC) and `clarify`
-  re-catches a story that lost it; `sequences` maps each user story to a flow and each AC to a flow,
-  a branch, or an explicit non-runtime N/A (no flow cap); and `review` traces the whole set through
-  spec → sequences → data-model → api → tasks → implement, flagging anything that dropped out. Even
-  `easy`/XS covers every use-case + AC — it just asks fewer questions about *how*.
+- **Readable diagrams.** `design` and `sequences` confirm each diagram **in prose**. The prose is a
+  plain-language walk of the flow and its branches. The skills write the source to the file, where
+  Obsidian renders it. They **never show raw Mermaid in the terminal** as the item to approve. If
+  `mmdc` is installed, the skills also render an image. ([`skills/_shared/diagram-presentation.md`](./skills/_shared/diagram-presentation.md))
+- **Full coverage of use cases and acceptance criteria.** Each spec §4 user story and each §5 AC is
+  covered from start to end:
+  - `specify` applies a **use-case floor**: each user story has ≥1 AC. `clarify` finds a story
+    that lost its AC.
+  - `sequences` maps each user story to a flow. It maps each AC to a flow, a branch, or an explicit
+    non-runtime N/A (there is no limit on the number of flows).
+  - `review` traces the full set through spec → sequences → data-model → api → tasks → implement.
+    It flags each item that is missing.
+
+  Also `easy`/XS covers each use case + AC. It only asks fewer questions about *how*.
 
 ## Target surfaces (what's being built)
 
-`design` opens §4 by declaring the feature's **target surface(s)** — *what's being built* — grounded
-in C4 container types: `backend-service`, `web-frontend` (SSR or SPA), `mobile-app`, `desktop-app`,
-`cli`, `worker`, `library-sdk`. The choice is derived from the spec's "for whom" (the spec stays
-product-level — it never names a surface), gated by the blast-radius gate (multi-surface usually
-spawns an ADR), drawn as **one C4 container per surface** in SAD §5, and written to the SAD
-frontmatter `target_surfaces: [...]`. Downstream stages **read** that declaration and gate their
-output by it — they never re-derive it:
+At the start of §4, `design` declares the **target surface(s)** of the feature, that is, *what the
+team builds*. The surface types come from C4 container types: `backend-service`, `web-frontend` (SSR or SPA), `mobile-app`, `desktop-app`,
+`cli`, `worker`, `library-sdk`. These rules apply to the declaration:
 
-- **`api`** picks the contract form from the surface (HTTP/OpenAPI · gRPC · events · `cli.md` ·
-  `public-api.md`); a UI surface *consumes* the backend contract rather than authoring one.
+- `design` derives the choice from the "for whom" of the spec. The spec stays at product level and
+  never names a surface.
+- The blast-radius gate controls the choice. More than one surface usually causes an ADR.
+- The SAD §5 shows **one C4 container for each surface**.
+- `design` writes the choice to the SAD frontmatter `target_surfaces: [...]`.
+
+Downstream stages **read** that declaration and use it to gate their output. They never derive it again:
+
+- **`api`** selects the contract form from the surface (HTTP/OpenAPI · gRPC · events · `cli.md` ·
+  `public-api.md`). A UI surface *consumes* the backend contract. It does not write its own contract.
 - **`sequences`** draws **UI-driven flows** (`<user>` → `<ui>` → `<service>`) for a UI surface.
-- **`tasks`** adds a **`ui`** task layer for a UI surface (backend-only stays domain/infra/app/ports).
-- **`plan-tests`** adds the **component / visual-regression / e2e-through-UI** tiers (the frontend
-  "testing trophy") for a UI surface; `implement` detects the actual tools (Playwright / Storybook / …).
-- **`review`** traces every acceptance criterion through *its* surface — a UI AC to a component /
-  e2e-through-UI test, not only a backend one.
-- **Reuse, don't reinvent.** `survey` inventories the existing **design system / components / tokens /
-  styling** into `architecture-map.md` §Frontend; `design` / `tasks` / `implement` **compose and
-  extend** it (modelled on the closest existing screen) instead of hand-rolling new UI — the frontend
-  echo of the backend's match-the-repo + copy-the-closest-precedent.
+- **`tasks`** adds a **`ui`** task layer for a UI surface (a backend-only feature keeps domain/infra/app/ports).
+- **`plan-tests`** adds the **component / visual-regression / e2e-through-UI** tiers for a UI
+  surface (the frontend "testing trophy"). `implement` detects the real tools (Playwright / Storybook / …).
+- **`review`** traces each acceptance criterion through *its* surface. A UI AC goes to a component /
+  e2e-through-UI test, not only to a backend test.
+- **Reuse, do not make again.** `survey` makes a list of the existing **design system / components /
+  tokens / styling** in `architecture-map.md` §Frontend. `design` / `tasks` / `implement` **compose and
+  extend** these items, with the closest existing screen as the model. They do not write new UI
+  from zero. This is the frontend equivalent of the backend rule: match the repo and copy the
+  closest precedent.
 
-It's **Option B** — frontend-awareness threaded through the existing stages (a `ui` layer,
-UI-architecture ADRs, UI flows, frontend test tiers); there is deliberately **no** separate
-component-tree / design-token / screen artifact. Full semantics:
+This is **Option B**: the existing stages include the frontend rules (a `ui` layer, UI-architecture
+ADRs, UI flows, frontend test tiers). There is **no** separate artifact for the component tree, the
+design tokens or the screens. This is intentional. Full semantics:
 [`skills/_shared/surfaces.md`](./skills/_shared/surfaces.md).
 
 ## Where the spec comes from
 
-It's not an input you have to write — **`specify` produces it.** Its interview front asks 3–5
-questions about the problem, the users, and what success looks like, then drafts the spec,
-validates each acceptance criterion with you, and runs a clean-context critic before writing
-`spec.md`. The idea is the input; the spec is the output.
+You do not write the spec as an input. **`specify` makes it.** Its interview asks 3–5 questions
+about the problem, the users and the criteria for success. Then it writes a draft of the spec. It
+validates each acceptance criterion with you. It runs a clean-context critic before it writes
+`spec.md`. The idea is the input. The spec is the output.
 
 ## Where we study the codebase / hold the current architecture
 
-The existing system is studied **once, in `survey`** (Step 0), which persists
-`docs/architecture-map.md` — the current architecture: module layout, layering, datastores,
-conventions, and a C4 of what exists. That map is the single source of "what's already here":
+The pipeline examines the existing system **one time, in `survey`** (Step 0). `survey` keeps a
+record of the current architecture in `docs/architecture-map.md`: module layout, layers, datastores,
+conventions, and a C4 of the existing system. That map is the single source for "what is already here":
 
-- **`specify`** reads it so the spec's constraints / non-goals reflect the real system (without
-  leaking tech into the acceptance criteria).
-- **`design`** reads it and **matches** the feature to that reality — the SAD describes *your*
-  system extended, not a greenfield design in a vacuum. It re-scans (via `explorer`) only if
-  the map is missing or stale.
-- **`data-model`** and **`implement`** read it for the persistence + wiring conventions the new
-  code must follow, instead of each re-discovering them.
+- **`specify`** reads it. Thus, the constraints / non-goals of the spec agree with the real system.
+  The spec does not put technical details into the acceptance criteria.
+- **`design`** reads it and **matches** the feature to the real system. The SAD describes *your*
+  system with the new feature, not a greenfield design without context. `design` scans the repo
+  again (with `explorer`) only if the map is missing or old.
+- **`data-model`** and **`implement`** read it for the persistence + wiring conventions that the new
+  code must obey. They do not find these conventions again each time.
 
-So you don't re-open "what's the current architecture?" at every stage — `survey` answers it once
-and the map carries it. Refresh the map (`survey` again) when the repo has drifted past the
-`reflects_commit` it records. In `design`, decisions expensive to reverse cross a blast-radius
-gate and become ADRs.
+Thus, you do not ask "what is the current architecture?" at each stage. `survey` answers it one
+time, and the map keeps the answer. If the repo has changed after the `reflects_commit` that the map
+records, run `survey` again to refresh the map. In `design`, decisions that are expensive to reverse
+go through a blast-radius gate and become ADRs.
 
-**On an empty project there's no current architecture to study — so `survey` establishes one.**
-Its greenfield mode gauges how you want to engage, then picks the stack / structure / data approach
-/ conventions with you (defaults-heavy), fixes them as the foundation (the same map, marked
-`mode: greenfield-bootstrap`, + foundational ADRs for the irreversible choices), and emits a
-scaffold `tasks.json`. `implement` then materializes the skeleton — anchored on a smoke test
-(«builds + boots + the test and migration tooling run») rather than per-folder TDD. After that the
-repo is real and the per-feature flow builds into it normally.
+**On an empty project, there is no current architecture to examine. Thus, `survey` makes one.**
+Its greenfield mode does these steps:
+
+1. It finds out how much you want to take part.
+2. It selects the stack / structure / data approach / conventions with you (mostly defaults).
+3. It sets them as the foundation. This is the same map, with the mark `mode: greenfield-bootstrap`,
+   + foundational ADRs for the irreversible choices.
+4. It writes a scaffold `tasks.json`.
+
+Then `implement` builds the skeleton. The skeleton has a smoke test as its anchor
+(«builds + boots + the test and migration tooling run»), not TDD for each folder. After that, the
+repo is real, and the per-feature flow builds into it as usual.
 
 ## The roadmap (the portfolio layer)
 
-The backbone builds **one feature at a time**. `roadmap` is the layer **above** it — one living
-`docs/roadmap.md` that shows the work *across* features, kept at **outcome altitude** (the "why",
-not a feature-and-date list, which is the biggest source of planning waste):
+The backbone builds **one feature at a time**. `roadmap` is the layer **above** the backbone. It is
+one living `docs/roadmap.md` that shows the work *across* features. It stays at **outcome altitude**:
+it shows the "why", not a list of features and dates. Such a list is the largest cause of waste in planning.
 
-- **Now** — committed, spec'd, in progress. Each item links to its `docs/features/<slug>/` (it
-  doesn't restate the spec) + a status.
-- **Next** — problems/opportunities, deliberately *not* yet spec'd, ordered by a light **RICE**
-  score (Reach × Impact × Confidence ÷ Effort). This is the candidate pool.
-- **Later** — directional outcomes/themes, no detail.
-- **Shipped** — what landed, with a link.
+- **Now** — committed, specified, in progress. Each item links to its `docs/features/<slug>/` (it
+  does not repeat the spec) + a status.
+- **Next** — problems/opportunities that are intentionally *not* specified yet. A light **RICE**
+  score (Reach × Impact × Confidence ÷ Effort) sets their order. This is the pool of candidates.
+- **Later** — outcomes/themes that give a direction, with no detail.
+- **Shipped** — the delivered items, with a link.
 
-It stays current because the pipeline updates it: **`specify` promotes a feature to Now**, and
-**`ship` moves it to Shipped** — delivery itself keeps the roadmap in sync, so it doesn't rot. It
-carries a one-line "direction, not a promise" disclaimer and never carries dates.
+The pipeline updates the roadmap, thus it stays current. **`specify` promotes a feature to Now**, and
+**`ship` moves it to Shipped**. The delivery itself keeps the roadmap in sync, so it does not become
+old. The roadmap has a one-line "direction, not a promise" disclaimer and never has dates.
 
 ## The implementation engine
 
-`implement` reads `tasks.json`, builds a dependency DAG, and runs a **TDD cycle per task** —
-`SELECT → RED → GREEN → REFACTOR → GATE → COMMIT`. It writes a failing test first, proves the
-failure is for the right reason, writes the minimal code to pass, keeps refactors green, runs
-the gate, and commits with `SDD-Task` / `SDD-AC` trailers.
+`implement` reads `tasks.json`, builds a dependency DAG, and runs a **TDD cycle for each task**:
+`SELECT → RED → GREEN → REFACTOR → GATE → COMMIT`. These are the steps:
 
-Three execution modes, chosen automatically from settings + DAG shape (with graceful fallback):
+1. It writes a failing test first.
+2. It proves that the test fails for the correct reason.
+3. It writes the minimal code to pass the test.
+4. It keeps the tests green during the refactor.
+5. It runs the gate.
+6. It commits with `SDD-Task` / `SDD-AC` trailers.
 
-- **Sequential single-agent TDD** — the default and the floor everything degrades to.
+There are three execution modes. The engine selects the mode from the settings + the DAG shape.
+If a mode is not available, the engine falls back to a simpler mode:
+
+- **Sequential single-agent TDD** — the default. All other modes fall back to this mode.
 - **Agent team** (`team_mode: true`) — `test-author` → `implementer` → `reviewer`
-  over the DAG, coordinated through a shared task list, one git worktree per agent.
-- **Dynamic workflow** (`workflow_mode: auto`) — a generated `Workflow` pipeline that fans out
-  independent tasks up to a parallelism cap.
+  on the DAG. A shared task list coordinates the agents. Each agent has its own git worktree.
+- **Dynamic workflow** (`workflow_mode: auto`) — a generated `Workflow` pipeline. It runs
+  independent tasks in parallel, up to a parallelism limit.
 
 ## Models, effort & agents
 
-Every skill and every agent declares an **execution profile** in its frontmatter — which model,
-how much reasoning effort, and which agents it spawns:
+Each skill and each agent declares an **execution profile** in its frontmatter. The profile sets the
+model, the reasoning effort and the agents that it starts:
 
 ```yaml
 # a skill's frontmatter
@@ -320,47 +381,64 @@ effort: high       # low | medium | high | xhigh | max
 agents: [critic]   # the agents this skill spawns
 ```
 
-Model is chosen by the **kind of work**, not by taste:
+The **type of work** sets the model, not personal preference:
 
 | Kind of work | Model | Effort | Who |
 |---|---|---|---|
 | Judgment (spec, design, review, critique, ambiguity, strategy) | `opus` | `high` | specify, clarify, design, review · `reviewer` / `critic` / `devils-advocate` / `strategist` / `analyst` |
 | Execution (write tests, write code) | `sonnet` | `medium` → `high` on escalation | `test-author`, `implementer` |
-| Research / gathering (+ web) | `sonnet` | `medium` | `researcher` (competitive / adjacent-solution research) |
+| Research / data collection (+ web) | `sonnet` | `medium` | `researcher` (competitive / adjacent-solution research) |
 | Search / scan / derivation | `haiku` / `inherit` | `low` / `medium` | `explorer`; data-model, api, sequences, tasks |
 
-The nine agents (`agents/`): **explorer** (brownfield scan), **test-author** (failing tests),
-**implementer** (makes them pass), **reviewer** (independent review), **critic**
-(coherence critique), **devils-advocate** (ambiguity + failure-mode hunt), **researcher**
-(competitive / web research), **strategist** (three strategic approaches), **analyst**
-(multi-perspective review) — the read-only ones run in **clean isolated context** (fresh eyes) and
-emit only cited findings. The last three are the **ideation analyses**, dispatched by `specify` and
-gated by the depth dial (easy skips them; hard runs the full suite).
+There are nine agents (`agents/`):
 
-Two policy levers sit on top of the table. **`judgment_model`** (`.claude/sdd.local.md`;
-`opus | fable`) raises **all** judgment agents (`reviewer` / `critic` / `devils-advocate` /
-`strategist` / `analyst`) to the Mythos-tier model in one switch — `agents/*.md` keep their
-tier-alias defaults; a per-role `model_<role>` key still wins. And on **L/XL** features the
-critical verifications — the `reviewer` in `review` and the `critic` in `design`/`specify` — run
-at **`effort: xhigh`** (via `CLAUDE_CODE_EFFORT_LEVEL`); the rest of the judgment work stays `high`.
+- **explorer** (brownfield scan)
+- **test-author** (failing tests)
+- **implementer** (makes the tests pass)
+- **reviewer** (independent review)
+- **critic** (coherence critique)
+- **devils-advocate** (ambiguity + failure-mode hunt)
+- **researcher** (competitive / web research)
+- **strategist** (three strategic approaches)
+- **analyst** (multi-perspective review)
 
-The full policy — override precedence (`env > invocation > model_<role> > judgment_model >
-frontmatter > session`), the `.size` scaling, and the env-var fallback for the `effort:` no-op
-some builds have — lives in one place: [`skills/_shared/agent-roster.md`](./skills/_shared/agent-roster.md).
-Short version: if a run feels under-reasoned, set `CLAUDE_CODE_EFFORT_LEVEL`.
+The read-only agents run in a **clean isolated context** (a new view). They give only cited
+findings. The last three agents are the **ideation analyses**. `specify` dispatches them, and the
+depth dial controls them (easy skips them; hard runs the full suite).
+
+Two policy controls apply on top of the table:
+
+- **`judgment_model`** (`.claude/sdd.local.md`; `opus | fable`). This one switch changes **all**
+  judgment agents (`reviewer` / `critic` / `devils-advocate` / `strategist` / `analyst`) to the
+  Mythos-tier model. The `agents/*.md` files keep their tier-alias defaults. A per-role
+  `model_<role>` key still has priority.
+- **L/XL features.** On these features, the critical verifications run at **`effort: xhigh`**
+  (with `CLAUDE_CODE_EFFORT_LEVEL`). These are the `reviewer` in `review` and the `critic` in
+  `design`/`specify`. The other judgment work stays at `high`.
+
+One file contains the full policy: [`skills/_shared/agent-roster.md`](./skills/_shared/agent-roster.md).
+The policy includes the override precedence (`env > invocation > model_<role> > judgment_model >
+frontmatter > session`), the `.size` scaling, and the env-var fallback. Some builds ignore the
+`effort:` key, and the fallback is for those builds.
+Short version: if a run does not seem to reason enough, set `CLAUDE_CODE_EFFORT_LEVEL`.
 
 ### Configuration — `.claude/sdd.local.md`
 
-The pipeline **auto-creates** this per-project settings file (YAML frontmatter) with **documented
-defaults** the first time a skill needs it — normally `specify` at the start — and adds it to
-`.gitignore` (it's per-developer). The file is **self-documenting**: every key carries its default,
-its allowed values, and a one-line explanation inline. Edit it to change behaviour. Two keys are
-**plugin-wide** — `interview_depth` is read by the Q&A skills (`specify` / `clarify` / `design`) to
-pre-select the depth dial, and `artifact_language` is read by every artifact-writing skill: it sets
-the language pipeline documents are written in — prose only, while section headings, frontmatter and
-machine tokens stay English (full rule →
-[`skills/_shared/artifact-language.md`](./skills/_shared/artifact-language.md)); the rest configure
-the `implement` engine:
+The pipeline **creates** this per-project settings file (YAML frontmatter) **automatically**, with
+**documented defaults**. It does this the first time that a skill needs the file, usually `specify`
+at the start. It also adds the file to `.gitignore`, because the file is per-developer.
+
+The file **documents itself**. Each key has its default, its permitted values and a one-line
+explanation inline. To change the behavior, edit the file.
+
+Two keys are **plugin-wide**:
+
+- The Q&A skills (`specify` / `clarify` / `design`) read `interview_depth` to preselect the depth dial.
+- Each artifact-writing skill reads `artifact_language`. This key sets the language of the pipeline
+  documents. It applies to prose only. Section headings, frontmatter and machine tokens stay in
+  English (full rule → [`skills/_shared/artifact-language.md`](./skills/_shared/artifact-language.md)).
+
+The other keys configure the `implement` engine:
 
 ```yaml
 interview_depth: medium    # easy | medium | hard — default depth for specify/clarify/design
@@ -390,16 +468,16 @@ effort_implementer: medium
 effort_reviewer: high
 ```
 
-Command detection is a stack-agnostic cascade: settings override → Makefile targets →
+The engine detects commands with a stack-agnostic cascade: settings override → Makefile targets →
 `package.json` scripts → language manifests (`go.mod`, `Cargo.toml`, `pyproject.toml`, …) →
 Docker probe for the integration tier.
 
 ## Quick start (idea → shipped)
 
-The argument every stage takes is the **feature slug** — a kebab-case name you make up once at
-the start (here `checkout-discounts`). It becomes the folder every artifact lands in —
-`docs/features/checkout-discounts/` — and is how each stage finds the previous stage's files,
-so use the **same slug at every stage**.
+Each stage takes the **feature slug** as its argument. The slug is a kebab-case name that you make
+one time at the start (here `checkout-discounts`). It becomes the folder for all artifacts:
+`docs/features/checkout-discounts/`. Each stage uses it to find the files of the previous stage.
+Thus, use the **same slug at each stage**.
 
 ```text
 /sdd:survey                             # once per repo: map the current architecture
@@ -416,36 +494,37 @@ so use the **same slug at every stage**.
 /sdd:ship          checkout-discounts   # verify it runs, changelog, PR
 ```
 
-> **`/clear` between stages** — each stage is gated, re-reads its inputs from disk, and ends by
-> printing the next `/sdd:…` command to copy (the handoff block). Loop-backs (`review` → `implement`)
-> stay in context; utilities make `/clear` optional.
+> **`/clear` between stages.** Each stage is gated and reads its inputs from disk again. At the end,
+> it prints the next `/sdd:…` command for you to copy (the handoff block). Loop-backs (`review` →
+> `implement`) stay in the context. For utilities, `/clear` is optional.
 
 Three notes on the first run:
 
-- **You don't need `classify-size` to start** — `specify` classifies the feature and writes
-  `.size` itself when it's absent. Run `/sdd:classify-size <slug>` only to size it *before*
-  specifying, or to re-classify when scope changes.
-- **Skip the depth question** by passing the dial inline: `/sdd:specify checkout-discounts
-  --depth=easy` (also on `clarify` / `design`; values `easy|medium|hard` — see
+- **You do not need `classify-size` to start.** If `.size` is absent, `specify` classifies the
+  feature and writes `.size` itself. Run `/sdd:classify-size <slug>` only for these cases: to set
+  the size *before* `specify`, or to classify again when the scope changes.
+- **To skip the depth question**, give the dial inline: `/sdd:specify checkout-discounts
+  --depth=easy`. This also works on `clarify` / `design`. The values are `easy|medium|hard` (see
   [Interview depth](#interview-depth-easy--medium--hard)).
-- Artifacts land in `docs/features/<slug>/`.
+- The artifacts go into `docs/features/<slug>/`.
 
 ### Routes — quick / standard / full
 
-A small feature doesn't need the full backbone — and it shouldn't need a confirmation at every
-stage either. Alongside `.size`, classification writes a **route** to
-`docs/features/<slug>/.route` (one word: `quick` / `standard` / `full`; defaults **XS/S → quick,
-M → standard, L/XL → full**, confirmed together with the size in the **same single question** —
-you can always pick a different route). The route decides how each handoff treats the optional
-stages (`clarify`, `sequences`, `data-model`, `api`, `plan-tests`):
+A small feature does not need the full backbone. It also must not need a confirmation at each
+stage. Together with `.size`, the classification writes a **route** to
+`docs/features/<slug>/.route`. The route is one word: `quick` / `standard` / `full`. The defaults
+are **XS/S → quick, M → standard, L/XL → full**. You confirm the route and the size in the **same
+single question**, and you can always select a different route. The route sets how each handoff
+uses the optional stages (`clarify`, `sequences`, `data-model`, `api`, `plan-tests`):
 
-- **`quick`** — the stage checks the skip condition **itself**: if the stage's work doesn't exist,
-  it's **auto-skipped with the reason stated** («auto-skipped clarify: zero open questions»), and
-  the `↳ or …` line inverts to offer the full path instead. If the work *does* exist, the stage runs.
-- **`standard`** — today's behaviour: the handoff **offers** the skip as `↳ or …` and you pick.
-- **`full`** — every optional stage runs; no skip alternatives are printed.
+- **`quick`** — the stage examines the skip condition **itself**. If the work of the stage does not
+  exist, the stage **skips automatically and gives the reason** («auto-skipped clarify: zero open
+  questions»). Then the `↳ or …` line changes and offers the full path. If the work *does*
+  exist, the stage runs.
+- **`standard`** — the current behavior. The handoff **offers** the skip as `↳ or …`, and you select.
+- **`full`** — each optional stage runs. The handoff prints no skip alternatives.
 
-Example — a config-toggle-sized feature (`quick` route) in one session:
+Example — a feature with the size of a config toggle (`quick` route) in one session:
 
 ```text
 /sdd:specify  rate-limit-bump --depth=easy   # size XS + route quick confirmed in one question →
@@ -458,25 +537,31 @@ Example — a config-toggle-sized feature (`quick` route) in one session:
 /sdd:ship     rate-limit-bump
 ```
 
-The skip conditions (`clarify` — zero open questions; `sequences` — no multi-step flow;
-`data-model` — no schema change; `api` — no contract change; `plan-tests` — inline in the spec)
-are canonical in [`skills/_shared/size-matrix.md`](./skills/_shared/size-matrix.md) — they're
-**N/A conditions, not size defaults**: an XS feature *with* a migration still runs `data-model`,
-on every route. The route steers handoffs only, it never locks a door: re-run
-`/sdd:classify-size <slug>` to switch routes mid-flight, or just invoke a skipped stage directly —
-it always runs.
+These are the skip conditions:
+
+- `clarify` — zero open questions.
+- `sequences` — no multi-step flow.
+- `data-model` — no schema change.
+- `api` — no contract change.
+- `plan-tests` — inline in the spec.
+
+The canonical source for these conditions is [`skills/_shared/size-matrix.md`](./skills/_shared/size-matrix.md).
+They are **N/A conditions, not size defaults**. Thus, an XS feature *with* a migration still runs
+`data-model`, on each route. The route controls only the handoffs. It never blocks a stage. To
+change the route during the work, run `/sdd:classify-size <slug>` again. Alternatively, start a
+skipped stage directly. It always runs.
 
 ### When a stage refuses
 
-Stages are gated: each one **hard-refuses when the artifact it consumes is missing** and names the
-stage to run first. A refusal is not an error — it's the pipeline telling you which step was
-skipped. The ones you're most likely to meet:
+The stages are gated. Each stage **hard-refuses when the artifact that it consumes is missing**. It
+then names the stage to run first. A refusal is not an error. It shows which step you skipped. These
+are the most frequent refusals:
 
 | Refusal | What it means | What to do |
 |---|---|---|
-| `design`: «run `specify` first» | there's no `spec.md` for this slug yet (or the slug is spelled differently) | run `/sdd:specify <slug>`; check the slug matches the folder under `docs/features/` |
-| `api`: «run `data-model` first» | the feature **changes the schema** but has no `data-model.md` — the contract can't be invented field-by-field. (No schema change → `api` doesn't refuse: it derives from the existing schema — the legal fast-lane skip) | run `/sdd:data-model <slug>` |
-| `tasks`: «no Accepted ADR» | `design` spawned no ADR (rare — usually a sign the SAD walk was cut short) | run `/sdd:decide-adr <slug>` for the key decision, or re-run `/sdd:design <slug>` |
+| `design`: «run `specify` first» | This slug has no `spec.md` yet (or the slug has a different spelling). | Run `/sdd:specify <slug>`. Make sure that the slug is the same as the folder under `docs/features/`. |
+| `api`: «run `data-model` first» | The feature **changes the schema**, but it has no `data-model.md`. The contract cannot be invented one field at a time. (If there is no schema change, `api` does not refuse. It derives the contract from the existing schema. This is the legal fast-lane skip.) | Run `/sdd:data-model <slug>`. |
+| `tasks`: «no Accepted ADR» | `design` made no ADR. This is rare, and it usually shows that the SAD walk stopped too early. | Run `/sdd:decide-adr <slug>` for the key decision, or run `/sdd:design <slug>` again. |
 
 ## Repository layout
 
@@ -496,94 +581,105 @@ dashboard/        the browser UI (vanilla JS, terminal-green, read-only): index.
 
 ## Roadmap
 
-Directions under consideration — not promises, no dates:
+These are possible directions. They are not promises and have no dates:
 
-- **`sync`** — spec↔code drift detection: re-derive what the code actually does and diff it
-  against the spec/SAD, so long-lived features don't quietly outgrow their documents.
-- **Traceability matrix + adherence score** — `review`/`ship` emit a single AC × (flow / contract
-  / task / test / commit) matrix with a coverage score, instead of prose-only tracing.
-- **Tracker integration** — `tasks.json` ⇄ Jira / Linear / GitHub Issues two-way sync (today the
-  export is one-shot and copy-paste).
-- **Constitution file** — a repo-level set of inviolable rules (security, compliance, style) every
-  stage reads and the validator enforces, complementing the per-feature artifacts.
+- **`sync`** — detection of drift between spec and code. It derives again what the code really does
+  and compares it with the spec/SAD. Thus, long-lived features do not silently grow past their documents.
+- **Traceability matrix + adherence score** — `review`/`ship` give one AC × (flow / contract
+  / task / test / commit) matrix with a coverage score. This replaces the tracing that is only prose.
+- **Tracker integration** — two-way sync between `tasks.json` and Jira / Linear / GitHub Issues.
+  Currently, the export is one-shot and copy-paste.
+- **Constitution file** — a repo-level set of rules that you must not break (security, compliance,
+  style). Each stage reads it, and the validator enforces it. It adds to the per-feature artifacts.
 
 **Shipped:** ~~MCP exposure~~ → see **[The visual dashboard](#the-visual-dashboard-opt-in)** below.
 
 ## The visual dashboard (opt-in)
 
-The roadmap's *"MCP exposure — pipeline state served over MCP so external tools and dashboards can read
-where every feature stands"* has shipped — and gained a control surface. The plugin carries an
-**`sdd-dashboard` MCP server** (`server/`, Bun + TypeScript) that auto-starts with every Claude Code
-session (declared in `.mcp.json`) and, when enabled, serves a **local browser dashboard** (`dashboard/`)
-on `127.0.0.1`. It reads every feature off disk (`docs/features/<slug>/`), shows its pipeline as a
-per-step checklist — `done` / `skipped` / `pending` / `blocked` — and renders each artifact (markdown +
-**mermaid** diagrams from vendored libs, fully offline; OpenAPI as plain YAML). Artifacts render in
-whatever language they're written — the state derivation reads only the English structural tokens,
-which never translate (see `artifact_language` above). Pure-markdown users who
-never opt in are unaffected — nothing binds, nothing opens.
+The roadmap item *"MCP exposure — pipeline state served over MCP so external tools and dashboards can read
+where every feature stands"* is shipped. It also got a control surface. These are its properties:
+
+- The plugin has an **`sdd-dashboard` MCP server** (`server/`, Bun + TypeScript).
+- The server starts automatically with each Claude Code session (declared in `.mcp.json`).
+- When enabled, the server serves a **local browser dashboard** (`dashboard/`) on `127.0.0.1`.
+- The dashboard reads each feature from disk (`docs/features/<slug>/`). It shows the pipeline of the
+  feature as a checklist with one line for each step: `done` / `skipped` / `pending` / `blocked`.
+- It renders each artifact: markdown + **mermaid** diagrams from vendored libs, fully offline.
+  It shows OpenAPI as plain YAML.
+
+The dashboard renders artifacts in the language that they use. The state derivation reads only the
+English structural tokens, and these tokens never change language (see `artifact_language` above).
+If you use only markdown and do not opt in, the dashboard has no effect. It binds no port and opens nothing.
 
 ### Launch it — three steps
 
-1. Install **[Bun](https://bun.sh)** (the server runtime — the same dependency the official Telegram
-   plugin uses): `curl -fsSL https://bun.sh/install | bash` or `brew install bun`.
-2. Set `dashboard_enabled: true` in your project's `.claude/sdd.local.md`
+1. Install **[Bun](https://bun.sh)**. Bun is the server runtime, and the official Telegram plugin
+   uses the same dependency. Use `curl -fsSL https://bun.sh/install | bash` or `brew install bun`.
+2. Set `dashboard_enabled: true` in the `.claude/sdd.local.md` of your project
    (see [Configuration](#configuration--claudesddlocalmd)).
-3. Run **`/sdd:start`** in your Claude Code session. The server is already running — it auto-started
-   with the session; this step just hands it your project directory, binds the port if needed, and
+3. Run **`/sdd:start`** in your Claude Code session. The server already runs, because it started
+   with the session. This step only gives it your project directory, binds the port if necessary, and
    prints the URL: `http://127.0.0.1:<port>/?session=<id>&token=<capability-token>`. Open that exact
-   URL in a browser — the token in it authorises the session.
+   URL in a browser. The token in the URL authorizes the session.
 
-A new session (or a server restart) mints a new token, so an old tab goes stale: re-run `/sdd:start`
-and open the fresh URL.
+A new session (or a server restart) makes a new token. Thus, an old tab stops working. Run
+`/sdd:start` again and open the new URL.
 
 ### How the panel updates
 
-Three mechanisms, layered:
+Three mechanisms work in layers:
 
-1. **Live, from disk.** The server watches `docs/` (`fs.watch`) and pushes a refresh over the
-   WebSocket whenever an artifact changes — no matter who changed it: a dashboard-driven run, a skill
-   you ran in the terminal, or you editing `spec.md` in vim. Changes appear within ~1 second.
-2. **Enriched, from Claude.** When Claude runs a stage it also calls `dashboard_update` /
-   `dashboard_log` / `dashboard_done` — that is what feeds the live activity feed, stage transitions,
-   review verdicts and the final handoff. A terminal-only run still refreshes the artifacts
-   (mechanism 1); it just doesn't narrate.
-3. **Self-healing connection.** The server pings the WebSocket to keep it alive; if it drops anyway,
-   the browser reconnects with backoff and re-syncs everything from disk — nothing stays stale.
+1. **Live, from disk.** The server monitors `docs/` (`fs.watch`). When an artifact changes, the
+   server sends a refresh over the WebSocket. The source of the change is not important: a
+   dashboard-driven run, a skill that you ran in the terminal, or your edit of `spec.md` in vim.
+   Changes show in about 1 second.
+2. **More data, from Claude.** When Claude runs a stage, it also calls `dashboard_update` /
+   `dashboard_log` / `dashboard_done`. These calls supply the live activity feed, the stage
+   transitions, the review verdicts and the final handoff. A run in the terminal only still
+   refreshes the artifacts (mechanism 1). It does not send the narration.
+3. **Self-healing connection.** The server sends pings on the WebSocket to keep it open. If the
+   connection stops, the browser connects again with backoff. It then syncs all data from disk
+   again, thus no data stays old.
 
 ### How you control it
 
-The **▶ Run next stage** / per-stage **run** / **⚒ Fix** (appears on a CHANGES REQUESTED review) /
-**+ new** buttons drive your live session — with honest **asynchronous** semantics:
+The **▶ Run next stage** / per-stage **run** / **⚒ Fix** (shows on a CHANGES REQUESTED review) /
+**+ new** buttons control your live session. They are **asynchronous**, and the UI shows this clearly:
 
-- A click sends the request to the server, which builds a validated `/sdd:<skill> <slug>` command from
-  a strict server-side allowlist and **queues** it into your Claude session — over the same channel
-  mechanism the official Telegram plugin uses (`notifications/claude/channel`).
-- The session consumes a queued command **only while idle at the prompt**. If Claude is mid-task, the
-  command waits; every queued command gets its own `queued → running → done` status line and the UI
-  never fakes synchronous execution.
-- The **depth selector** (topbar) sets `--depth` for dashboard-driven runs: `easy` (default — skills
-  self-decide reversible calls and rarely block on questions), `medium`, or `hard`.
-- If a dashboard-driven run genuinely needs a human decision, Claude posts the question **into the
-  panel** (`dashboard_ask`): a card with 2–4 option buttons appears in the activity pane and the run
-  pauses; your click sends the answer back through the same queue and the run resumes. The browser
-  only ever sends an option *index* — the option text was authored by Claude itself. You can always
-  answer in the terminal instead.
-- Free browser text can never become a command — only the validated skill name + slug + depth pass
-  the allowlist.
+- A click sends the request to the server. The server builds a validated `/sdd:<skill> <slug>`
+  command from a strict server-side allowlist. Then it **queues** the command into your Claude
+  session. It uses the same channel mechanism as the official Telegram plugin
+  (`notifications/claude/channel`).
+- The session consumes a queued command **only when it is idle at the prompt**. If Claude is busy
+  with a task, the command waits. Each queued command has its own `queued → running → done` status
+  line. The UI never shows false synchronous execution.
+- The **depth selector** (topbar) sets `--depth` for dashboard-driven runs: `easy` (default; skills
+  make reversible decisions themselves and rarely stop for questions), `medium`, or `hard`.
+- Sometimes a dashboard-driven run really needs a human decision. Then Claude puts the question
+  **into the panel** (`dashboard_ask`). A card with 2–4 option buttons shows in the activity pane,
+  and the run pauses. Your click sends the answer back through the same queue, and the run
+  continues. The browser sends only an option *index*. Claude itself wrote the option text. You can
+  always answer in the terminal instead.
+- Free text from the browser can never become a command. Only the validated skill name + slug +
+  depth go through the allowlist.
 
 ### What the panel does NOT do
 
-- It never writes to disk — artifacts are edited only by the pipeline in your terminal.
-- It has no chat input, and a blocking `AskUserQuestion` in the **terminal** stays terminal-only —
-  the panel's option cards exist precisely so dashboard-driven runs don't block there, but free text
-  never travels from the browser into the session.
-- It doesn't survive a server restart — re-run `/sdd:start` for a fresh URL/token.
+- It never writes to disk. Only the pipeline in your terminal edits the artifacts.
+- It has no chat input. A blocking `AskUserQuestion` in the **terminal** stays in the terminal only.
+  The option cards of the panel exist so that dashboard-driven runs do not stop there. But free
+  text never goes from the browser into the session.
+- It does not continue after a server restart. Run `/sdd:start` again to get a new URL/token.
 
 **Setup, config & troubleshooting:** [`server/README.md`](./server/README.md).
 
-**Security:** binds loopback only; the API is read-only and every read is realpath-contained to `docs/`
-with an extension allowlist; all routes require a per-session capability token; inbound commands are built
-**only** from a server-side skill + slug allowlist (browser text never becomes an arbitrary `/sdd:` command).
+**Security:**
+
+- The server binds to loopback only.
+- The API is read-only. Each read is realpath-contained to `docs/` and has an extension allowlist.
+- All routes must have a per-session capability token.
+- The server builds inbound commands **only** from a server-side skill + slug allowlist. Browser text
+  never becomes an arbitrary `/sdd:` command.
 
 ## License
 

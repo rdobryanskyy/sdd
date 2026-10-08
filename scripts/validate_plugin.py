@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Validate the SDD Claude Code plugin.
 
-Checks the plugin manifest + marketplace manifest agree on name / version / description,
-that the version is semver, and that every triggering skill and agent carries the required
-frontmatter. Run from the repo root:
+This script examines these items:
+- The plugin manifest and the marketplace manifest have the same name / version / description.
+- The version is semver.
+- Each trigger skill and each agent has the necessary frontmatter.
+
+Run the script from the repo root:
 
     python3 scripts/validate_plugin.py
 
-Exits non-zero on the first category of failures (CI gate). Prints one line per check.
+The script exits non-zero at the first category of failures (CI gate). It prints one line
+for each check.
 """
 
 from __future__ import annotations
@@ -86,7 +90,7 @@ def main() -> int:
     auth_name = auth if isinstance(auth, str) else (auth.get("name") if isinstance(auth, dict) else None)
     check(bool(auth_name), "plugin declares an author", "plugin.json has no author")
 
-    # --- manifest schema FIELD TYPES (Claude Code's loader rejects wrong types) ---
+    # --- FIELD TYPES of the manifest schema (the loader of Claude Code rejects wrong types) ---
     repo = plugin.get("repository")
     check(repo is None or isinstance(repo, str),
           "plugin repository is a string (or absent)",
@@ -107,9 +111,9 @@ def main() -> int:
         check(bool(entry.get("description")), "marketplace entry has a description", "marketplace 'sdd' entry has no description")
         check(bool(entry.get("source")), "marketplace entry has a source", "marketplace 'sdd' entry has no source")
 
-    # --- cross-tool manifests: the Codex + Cursor mirrors carry the same name + version ---
-    # v1.9.0 ships .codex-plugin/ + .agents/plugins/ (Codex CLI) and .cursor-plugin/ (Cursor);
-    # a version bump that misses one of them would silently publish a stale manifest.
+    # --- cross-tool manifests: the Codex + Cursor mirrors have the same name + version ---
+    # v1.9.0 ships .codex-plugin/ + .agents/plugins/ (Codex CLI) and .cursor-plugin/ (Cursor).
+    # If a version bump does not update one of them, a stale manifest is published with no warning.
     print("== cross-tool manifests ==")
 
     def load_tool_manifest(rel: str):
@@ -141,10 +145,10 @@ def main() -> int:
         check(cm_entry is not None and bool(cm_entry.get("source")),
               ".agents marketplace lists the 'sdd' plugin with a source",
               ".agents/plugins/marketplace.json has no 'sdd' plugin entry with a source")
-        # Codex CANNOT install a plugin whose local path is the marketplace root: it strips `./`
-        # and rejects the empty remainder (codex-rs marketplace.rs, resolve_local_plugin_source_path)
-        # — the entry is silently skipped and the marketplace lists zero plugins. The self-marketplace
-        # therefore must use the git `url` object form pointing back at this repo.
+        # Codex CANNOT install a plugin if its local path is the marketplace root. Codex removes `./`
+        # and rejects the empty remainder (codex-rs marketplace.rs, resolve_local_plugin_source_path).
+        # Then Codex skips the entry with no warning, and the marketplace lists zero plugins. Thus the
+        # self-marketplace must use the git `url` object form that points back to this repo.
         cm_src = (cm_entry or {}).get("source")
         check(isinstance(cm_src, dict) and cm_src.get("source") == "url"
               and str(cm_src.get("url", "")).startswith("https://github.com/"),
@@ -168,7 +172,7 @@ def main() -> int:
         return [x.strip() for x in v.split(",") if x.strip()]
 
     def check_profile(label: str, fm: dict, require: bool, require_agents: bool = False):
-        """Validate model/effort/agents attributes if present (required on skills)."""
+        """If model/effort/agents attributes are present, validate them (skills must have them)."""
         m, e = fm.get("model"), fm.get("effort")
         if require:
             check(m is not None, f"{label} declares model", f"{label} is missing the model attribute")
@@ -189,7 +193,7 @@ def main() -> int:
                 check(a in agent_names, f"{label} → agent '{a}' exists",
                       f"{label} references agent '{a}' with no agents/{a}.md")
 
-    # --- skills: every trigger skill has name + description + model/effort/agents profile ---
+    # --- skills: each trigger skill has a name, a description and a model/effort/agents profile ---
     print("== skills ==")
     skills_dir = ROOT / "skills"
     for skill_md in sorted(skills_dir.glob("*/SKILL.md")):
@@ -217,18 +221,19 @@ def main() -> int:
         check("description" in _block_keys(agent_md), f"agent '{agent_md.stem}' has a description", f"agent '{agent_md.name}' has no description")
         check_profile(f"agent '{agent_md.stem}'", fm, require=True)
 
-    # === semantic + consistency invariants (the checks a human ran by hand each change) ===
-    # The groups above check structure (manifests agree, frontmatter valid). These check the
-    # conventions the plugin actually relies on: doc links resolve, the invocation form is right,
-    # every stage ends with its handoff block, the surface taxonomy is single-source, and no
-    # _shared/ file lost all its referrers. Structure passing != the conventions holding.
+    # === semantic + consistency invariants (the checks that a person did by hand for each change) ===
+    # The groups above examine the structure (the manifests agree, the frontmatter is valid). These
+    # groups examine the conventions that the plugin uses: doc links resolve, the invocation form is
+    # correct, each stage ends with its handoff block, the surface taxonomy has a single source, and
+    # each _shared/ file has at least one referrer. A correct structure does not prove the conventions.
     skill_glob = sorted((ROOT / "skills").rglob("*.md"))
     skill_specs = sorted((ROOT / "skills").glob("*/SKILL.md"))
     doc_pool = skill_glob + sorted((ROOT / "agents").glob("*.md"))
 
     # --- skill count in prose: README + the 4 manifests state the REAL skill count ---
-    # The "N atomic" phrase is marketing prose that silently rots when a skill is added;
-    # every file that carries it must agree with the actual number of skills/*/SKILL.md.
+    # The "N atomic" phrase is marketing prose. When a person adds a skill, the phrase becomes
+    # wrong with no warning. Each file that contains the phrase must agree with the real number
+    # of skills/*/SKILL.md.
     print("== skill count in prose ==")
     n_skills = len(skill_specs)
     ATOMIC_RE = re.compile(r"\b(\d+) atomic")
@@ -240,10 +245,10 @@ def main() -> int:
               f"{rel} must say '{n_skills} atomic …' to match the {n_skills} skills/*/SKILL.md "
               f"(found: {counts if counts else 'no `N atomic` phrase'})")
 
-    # --- markdown relative links resolve (replaces the per-change manual link sweep) ---
-    # Only *.md / dir targets are resolved (the doc cross-references). Skipped: http(s), #anchors,
-    # any <placeholder> target, and the template-runtime paths that resolve ONLY inside a generated
-    # docs/features/<slug>/ folder (the skills/*/templates/ scaffolds link to those).
+    # --- markdown relative links resolve (replaces the manual link check for each change) ---
+    # The check resolves only *.md / dir targets (the doc cross-references). It skips http(s),
+    # #anchors, all <placeholder> targets, and the template-runtime paths. These paths resolve ONLY
+    # in a generated docs/features/<slug>/ folder (the skills/*/templates/ scaffolds link to them).
     print("== links ==")
     LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
     LINK_ALLOW = {"./CONTEXT.md", "../spec.md", "../sad.md", "../data-model.md", "../tasks.json"}
@@ -271,12 +276,14 @@ def main() -> int:
           "broken relative links (real *.md/dir target missing, not template-runtime):\n        "
           + "\n        ".join(broken))
 
-    # --- invocation form: the namespaced /sdd:<name>, never the hyphenated /sdd-<name> ---
-    # The plugin ships skills (no commands/ dir), so Claude Code invokes them /sdd:<name>. The only
-    # legit /sdd- in the tree is the proof-run branch ref proof/sdd-notification-preferences and the
-    # `sdd-dashboard` MCP server / `~/.claude/sdd-dashboard/` state dir (a server name, not an
-    # invocation). We scan docs + the manifests (the v1.8.4 sweep missed plugin.json's description —
-    # that gap stays closed).
+    # --- invocation form: the namespaced /sdd:<name>, never the hyphenated form (slash + sdd-<name>) ---
+    # The plugin ships skills (no commands/ dir), so Claude Code invokes them as /sdd:<name>. The tree
+    # has only these correct uses of the hyphenated form:
+    # - the proof-run branch ref (`proof` + slash + `sdd-notification-preferences`);
+    # - the `sdd-dashboard` MCP server and the `~/.claude/sdd-dashboard/` state dir (a server name,
+    #   not an invocation).
+    # We scan the docs and the manifests. The v1.8.4 sweep did not scan the description in
+    # plugin.json, and this check keeps that gap closed.
     print("== invocation form ==")
     SDD_HYPHEN = re.compile(r"(?<!proof)/sdd-(?!dashboard)")
     form_files = link_files + [ROOT / ".claude-plugin" / "plugin.json", ROOT / ".claude-plugin" / "marketplace.json"]
@@ -290,9 +297,9 @@ def main() -> int:
           "found the stale hyphenated /sdd- form (use /sdd:<name>) at: " + ", ".join(offenders))
 
     # --- every stage ends with the handoff block (the v1.8.1 output contract) ---
-    # The phrase «stage-handoff block» is the contract wording every spine's final step uses;
-    # a bare `handoff.md` substring (e.g. in a passing mention) is not enough to prove the
-    # skill actually ends with the block.
+    # The phrase «stage-handoff block» is the contract text that the final step of each spine
+    # uses. A bare `handoff.md` substring (for example, in a short mention) does not prove that
+    # the skill ends with the block.
     print("== handoff block ==")
     for skill_md in skill_specs:
         base = skill_md.parent.name
@@ -300,11 +307,11 @@ def main() -> int:
               f"skill '{base}' emits the stage-handoff block (the literal phrase is present)",
               f"skill '{base}' SKILL.md never says 'stage-handoff block' — every stage must end with «emit the stage-handoff block per _shared/handoff.md»")
 
-    # --- every skill verifies its own output (the structural self-check contract) ---
-    # _shared/self-check.md defines the contract; every SKILL.md either runs a named checklist
-    # or maps its heavy verifier (critic/reviewer/drift/mermaid/GATE) onto it — the literal
-    # phrase «structural self-check» is the greppable evidence, same mechanism as the
-    # stage-handoff check above.
+    # --- each skill examines its own output (the structural self-check contract) ---
+    # _shared/self-check.md defines the contract. Each SKILL.md runs a named checklist, or it
+    # maps its large verifier (critic/reviewer/drift/mermaid/GATE) onto the contract. The literal
+    # phrase «structural self-check» is the evidence that grep can find. This is the same
+    # mechanism as the stage-handoff check above.
     print("== structural self-check ==")
     for skill_md in skill_specs:
         base = skill_md.parent.name
@@ -313,7 +320,7 @@ def main() -> int:
               f"skill '{base}' SKILL.md never says 'structural self-check' — every skill must run "
               f"the checklist (or map its heavy verifier) per _shared/self-check.md")
 
-    # --- skill dir names are BRE-safe (install.sh interpolates them into a sed pattern) ---
+    # --- skill dir names are BRE-safe (install.sh puts them into a sed pattern) ---
     print("== skill dir names ==")
     DIRNAME_RE = re.compile(r"^[a-z0-9-]+$")
     for skill_md in skill_specs:
@@ -322,9 +329,9 @@ def main() -> int:
               f"skill dir '{base}' matches ^[a-z0-9-]+$",
               f"skill dir '{base}' must match ^[a-z0-9-]+$ — install.sh interpolates the dir name into a sed (BRE) pattern, so a dot/underscore/+ would break the rename pass")
 
-    # --- cross-tool mechanism coverage: every Claude mechanism a spine uses is mapped ---
-    # tool-adapters.md is the single Codex/Cursor mapping table; a spine that starts using a
-    # new Claude-specific mechanism without a row there strands non-Claude users.
+    # --- cross-tool mechanism coverage: each Claude mechanism that a spine uses has a map ---
+    # tool-adapters.md is the single Codex/Cursor map table. If a spine starts to use a new
+    # Claude-specific mechanism without a row in that table, non-Claude users cannot use the spine.
     print("== cross-tool mechanism coverage ==")
     adapters_text = (ROOT / "skills" / "_shared" / "tool-adapters.md").read_text()
     MECHANISMS = ["AskUserQuestion", "TeamCreate", "Workflow", "subagent_type", "/clear"]
@@ -336,9 +343,10 @@ def main() -> int:
               f"mechanism '{mech}' (used by {len(used_in)} skill(s)) is mapped in tool-adapters.md",
               f"mechanism '{mech}' is used by {', '.join(sorted(used_in))} but has no row in _shared/tool-adapters.md — Codex/Cursor users get no mapping for it")
 
-    # --- the surface taxonomy is single-source in _shared/surfaces.md (DRY) ---
-    # The two canonical tables (the taxonomy + the per-skill gating table) live ONLY here; a SKILL.md
-    # that copies a header row has duplicated the source of truth (surfaces.md's own discipline rule).
+    # --- the surface taxonomy has a single source in _shared/surfaces.md (DRY) ---
+    # The two canonical tables (the taxonomy + the gate table for each skill) are ONLY in that file.
+    # If a SKILL.md copies a header row, it duplicates the source of truth. This breaks the
+    # discipline rule of surfaces.md itself.
     print("== taxonomy single-source ==")
     surfaces_text = (ROOT / "skills" / "_shared" / "surfaces.md").read_text()
     TAXONOMY_ROWS = [
@@ -353,9 +361,10 @@ def main() -> int:
                + ", ".join(dups)) if dups
               else f"taxonomy row `{row} …` is missing from _shared/surfaces.md (did it move/rename?)")
 
-    # --- architecture-map template shape: the machine-readable keys survey fills ---
-    # implement's command-detection cascade reads test_cmd/lint_cmd from the map frontmatter and
-    # design/others key freshness off reflects_commit — the template must keep declaring them.
+    # --- architecture-map template shape: the machine-readable keys that survey fills ---
+    # The command-detection cascade of implement reads test_cmd/lint_cmd from the map frontmatter.
+    # design and other skills use reflects_commit to find if the map is fresh. Thus the template
+    # must continue to declare these keys.
     print("== architecture-map template ==")
     amap = ROOT / "skills" / "survey" / "templates" / "architecture-map.md"
     amap_fm = _block_keys(amap)
@@ -366,20 +375,21 @@ def main() -> int:
               f"command-detection / staleness checks read it")
 
     # --- model policy consistency: judgment_model is documented in both policy files ---
-    # The judgment_model settings key (opus|fable switch for the judgment agents) is defined in
-    # the settings doc and consumed per agent-roster's precedence — if either file drops the
-    # mention, the policy silently forks.
+    # The settings doc defines the judgment_model settings key (the opus|fable switch for the
+    # judgment agents). The agents use the key in the precedence order of agent-roster. If one of
+    # the two files removes the mention, the policy forks with no warning.
     print("== model policy ==")
     for rel in ("skills/implement/references/settings.md", "skills/_shared/agent-roster.md"):
         check("judgment_model" in (ROOT / rel).read_text(),
               f"{rel} documents judgment_model",
               f"{rel} never mentions 'judgment_model' — the settings doc and the roster policy must both carry it")
 
-    # --- artifact language: the key is defined + the rule is threaded through every writer ---
-    # The artifact_language settings key (en|uk prose switch for pipeline documents) is defined in
-    # the settings doc and its rule lives in _shared/artifact-language.md — if either drops the
-    # mention, the policy silently forks. And every artifact-writing skill must point at the shared
-    # rule; a dropped pointer means that skill's documents silently revert to always-English.
+    # --- artifact language: the key is defined + each writer points to the rule ---
+    # The settings doc defines the artifact_language settings key (the en|uk prose switch for the
+    # pipeline documents). Its rule is in _shared/artifact-language.md. If one of the two files
+    # removes the mention, the policy forks with no warning. Also, each skill that writes artifacts
+    # must point to the shared rule. If a skill loses the pointer, its documents go back to English
+    # only, with no warning.
     print("== artifact language ==")
     for rel in ("skills/implement/references/settings.md", "skills/_shared/artifact-language.md"):
         check("artifact_language" in (ROOT / rel).read_text(),
@@ -394,10 +404,23 @@ def main() -> int:
               f"skills/{name}/SKILL.md never mentions 'artifact-language.md' — every artifact-writing "
               f"skill must carry the language pointer")
 
-    # --- the route table is single-source in _shared/size-matrix.md + `.route` is threaded ---
-    # The Routes table (quick/standard/full handoff behaviour) lives ONLY in size-matrix.md;
-    # and the `.route` artifact must be named by the files that write/consume it — a rename or
-    # a dropped mention silently reverts the pipeline to always-standard.
+    # --- writing standard: each skill and agent points to the ASD-STE100 rule ---
+    # _shared/ste100.md is the one prose-style rule for all English text. If a skill or an agent
+    # loses the pointer, it goes back to free-style English with no warning.
+    print("== writing standard (ASD-STE100) ==")
+    check((ROOT / "skills" / "_shared" / "ste100.md").exists(),
+          "skills/_shared/ste100.md exists",
+          "skills/_shared/ste100.md is missing — the ASD-STE100 writing standard has no source")
+    for f in skill_specs + sorted((ROOT / "agents").glob("*.md")):
+        check("ste100.md" in f.read_text(),
+              f"{f.relative_to(ROOT)} points at _shared/ste100.md",
+              f"{f.relative_to(ROOT)} never mentions 'ste100.md' — every skill and agent must carry "
+              f"the ASD-STE100 writing-standard pointer")
+
+    # --- the route table has a single source in _shared/size-matrix.md + files name `.route` ---
+    # The Routes table (quick/standard/full handoff behavior) is ONLY in size-matrix.md.
+    # Also, the files that write or read the `.route` artifact must name it. If a person renames
+    # it or removes a mention, the pipeline goes back to standard for all runs, with no warning.
     print("== routes ==")
     size_matrix_text = (ROOT / "skills" / "_shared" / "size-matrix.md").read_text()
     ROUTE_HEADER = "| Route | Handoff behaviour at an optional stage |"
@@ -422,10 +445,11 @@ def main() -> int:
               f"_shared/{sf.name} is an orphan — nothing under skills/ or agents/ points to it")
 
     # === dashboard: .mcp.json + server/ + dashboard/ + the `start` handshake skill ===
-    # The visual dashboard (the shipped "MCP exposure" feature) is opt-in but its files must
-    # stay structurally sound: the MCP server is declared correctly, the server/dashboard
+    # The visual dashboard (the shipped "MCP exposure" feature) is opt-in, but its files must
+    # keep a correct structure: the MCP server declaration is correct, the server/dashboard
     # sources exist, the render libs are vendored (offline), and the `start` skill is the
-    # documented handshake. A missing piece silently breaks `/sdd:start` for everyone who opts in.
+    # documented handshake. If one part is missing, `/sdd:start` breaks with no warning for all
+    # users who opt in.
     print("== dashboard (mcp server + ui) ==")
     mcp_path = ROOT / ".mcp.json"
     if check(mcp_path.exists(), ".mcp.json exists", ".mcp.json is missing (the dashboard MCP server is undeclared)"):
@@ -471,15 +495,16 @@ def main() -> int:
         except json.JSONDecodeError as exc:
             check(False, "", f"server/package.json is not valid JSON: {exc}")
 
-    # dashboard/ UI + vendored render libs (vendored, not CDN — offline reliability).
-    # mermaid stays vendored but is lazy-loaded by app.js (only when a ```mermaid
-    # block is actually rendered); redoc was dropped with the read-only dashboard.
+    # dashboard/ UI + vendored render libs (vendored, not CDN, so that they work offline).
+    # mermaid stays vendored, but app.js loads it lazily (only when it renders a ```mermaid
+    # block). redoc was removed when the dashboard became read-only.
     for rel in ("dashboard/index.html", "dashboard/app.js", "dashboard/style.css",
                 "dashboard/vendor/marked.min.js", "dashboard/vendor/mermaid.min.js"):
         check((ROOT / rel).exists(), f"{rel} exists", f"{rel} is missing")
 
-    # The `start` skill — the documented handshake (auto-discovered as a skill above, but
-    # its dashboard-specific contract must hold: it calls the handshake tool + gates on opt-in).
+    # The `start` skill — the documented handshake. The code above finds it automatically as a
+    # skill, but its dashboard contract must also be correct: it calls the handshake tool and it
+    # examines the opt-in.
     start_md = ROOT / "skills" / "start" / "SKILL.md"
     if check(start_md.exists(), "skills/start/SKILL.md exists", "skills/start/SKILL.md is missing (the /sdd:start handshake)"):
         start_text = start_md.read_text()
@@ -499,7 +524,7 @@ def main() -> int:
 
 
 def _block_keys(path: Path) -> set[str]:
-    """Keys present in the frontmatter, including multi-line (folded) ones like `description: >`."""
+    """The keys in the frontmatter, also the multi-line (folded) keys such as `description: >`."""
     text = path.read_text()
     if not text.startswith("---"):
         return set()

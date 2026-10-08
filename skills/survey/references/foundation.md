@@ -1,45 +1,79 @@
 # Greenfield foundation — calibrate, pick, fix, scaffold
 
-When `survey` detects an empty repo, it doesn't write «greenfield — nothing here». It runs a short
-session to **establish the foundation** so the per-feature flow has something real to build into,
-then hands a skeleton to `implement`. The session is **adaptive to the person** — gauge their level
-once, then meet them there.
+If `survey` finds an empty repo, it does not write «greenfield — nothing here». It runs a short
+session to **set the foundation**. Then the per-feature flow has a real base for new features.
+After the session, survey gives a skeleton to `implement`. The session **adapts to the person**.
+Find the level of the user one time, then work at that level.
 
 ## G2 — Calibrate (one question, sets everything after)
 
-Open with a single `AskUserQuestion` that gauges how the user wants to engage (and implicitly their level). Phrase it warmly, per [`../../_shared/ask-style.md`](../../_shared/ask-style.md):
+Start with one `AskUserQuestion`. It finds how the user wants to work, and it also shows their
+level. Use friendly words, per [`../../_shared/ask-style.md`](../../_shared/ask-style.md):
 
-- **«Pick good defaults, I'll confirm»** → *guided-default* depth: propose a complete coherent foundation, ask **one** confirm, explain each piece in plain language. Best for a first-timer / non-engineer / "just get me going".
-- **«Walk me through each choice with explanations»** → *guided-explained* depth: one question per major choice, each option glossed (no jargon without a plain-words explanation). Best for a junior who wants to learn the why.
-- **«Let me choose each piece, keep it terse»** → *expert* depth: offer the choices without the long explanations, accept overrides freely. Best for a senior.
+- **«Pick good defaults, I will confirm»** → *guided-default* depth:
+  - Propose a complete, coherent foundation.
+  - Ask for **one** confirmation.
+  - Explain each item in plain words.
+  - This depth is best for a first-time user, a person who is not an engineer, or a user who wants to start quickly.
+- **«Walk me through each choice with explanations»** → *guided-explained* depth:
+  - Ask one question for each major choice.
+  - Give a short explanation for each option. Do not use jargon without an explanation in plain words.
+  - This depth is best for a junior who wants to learn the reasons.
+- **«Let me choose each piece, keep it terse»** → *expert* depth:
+  - Give the choices without the long explanations.
+  - Accept the changes of the user freely.
+  - This depth is best for a senior.
 
-Calibration governs **depth + phrasing**, not the set of decisions — the same foundation gets fixed either way. Default to *guided-default* if the answer is ambiguous (over-explaining is cheaper than overwhelming).
+The calibration sets the **depth + the words**. It does not change the set of decisions. The skill
+fixes the same foundation at each depth. If the answer is not clear, use *guided-default*. Too
+much explanation costs less than too much information at one time.
 
 ## G3 — Intent (short, not a brief)
 
-1–3 questions, at the calibrated depth: **what is this** (one line) and **what kind of capabilities** (e.g. HTTP API / CLI / web app / library / worker), plus the one or two hard constraints if any (must use language X / must deploy to Y). Stop there — feature-level scope is `specify`'s job, per feature. The goal is only «enough to choose an architecture».
+Ask 1–3 questions at the calibrated depth:
+
+- **What is this** (one line).
+- **What type of capabilities** (for example HTTP API / CLI / web app / library / worker).
+- The one or two hard constraints, if they exist (must use language X / must deploy to Y).
+
+Stop after these questions. The feature-level scope is the job of `specify`, for each feature.
+The only goal is «enough to choose an architecture».
 
 ## G4 — The foundation choices (recommend a coherent default set)
 
-Pick these together. In *guided-default* mode, present the whole set as one recommended bundle + a confirm; in *guided-explained* / *expert*, walk the ones that matter. Always recommend a **coherent** default (the pieces fit each other), and gloss each per ask-style.
+Pick these items together. In *guided-default* mode, show the full set as one recommended bundle
+and ask for one confirmation. In *guided-explained* / *expert* mode, ask about the important items
+one by one. Always recommend a **coherent** default, where the items agree with each other. Give a
+short explanation for each item per ask-style.
 
 | Decision | What to pick | Default heuristic |
 |---|---|---|
-| **Stack** | language + framework + datastore | match the intent (HTTP API → a mainstream web framework + a relational DB; CLI → the language's standard CLI lib, no DB) |
-| **Architectural style** | how code is organized | a sensible default for the stack (modular service → hexagonal `domain → app → infra → ports`; CLI/library → the ecosystem's idiomatic layout). SDD works with any style — pick what fits, don't force hexagonal |
-| **Folder / module structure** | the top-level layout | the stack's conventional layout (a modular service might use `cmd|src/` + `modules/<m>/...` + `migrations/` + `docs/`; a CLI/library follows its ecosystem) — adapt freely |
-| **Data / persistence** | migration tool + ID strategy | the stack's standard migration tool; app-generated time-sortable IDs; «DB as dumb storage» (see `data-model`'s baseline) |
-| **Conventions** | errors, tests, CI | a unified error envelope; unit + integration (ephemeral real dependency) test layout; one CI workflow running build+test+lint |
+| **Stack** | language + framework + datastore | Match the intent. HTTP API → a mainstream web framework + a relational DB. CLI → the standard CLI lib of the language, no DB. |
+| **Architectural style** | how the code is organized | Use a good default for the stack. Modular service → hexagonal `domain → app → infra → ports`. CLI/library → the idiomatic layout of the ecosystem. SDD works with all styles. Pick the style that fits. Do not force hexagonal. |
+| **Folder / module structure** | the top-level layout | Use the conventional layout of the stack. A modular service can use `cmd|src/` + `modules/<m>/...` + `migrations/` + `docs/`. A CLI/library follows its ecosystem. You can adapt it freely. |
+| **Data / persistence** | migration tool + ID strategy | Use the standard migration tool of the stack. Use time-sortable IDs that the app makes. Use «DB as dumb storage» (see the baseline of `data-model`). |
+| **Conventions** | errors, tests, CI | Use one unified error envelope. Use a unit + integration test layout (the integration tests use an ephemeral real dependency). Use one CI workflow that runs build+test+lint. |
 
-Each irreversible pick (stack, module style, persistence) becomes a **foundational ADR** in `docs/adr/` — the «why» of the project's bones, so a later contributor doesn't silently re-litigate them. These ADRs are real blast-radius decisions (changing the stack/style later is a rewrite).
+Each irreversible choice (stack, module style, persistence) becomes a **foundational ADR** in
+`docs/adr/`. These ADRs record the «why» of the base structure of the project. Then a later
+contributor does not silently argue about these decisions again. These ADRs are real
+blast-radius decisions: a later change of the stack or the style is a rewrite.
 
 ## G5 — Fix the foundation (the map as target baseline)
 
-Write `docs/architecture-map.md` from the template with `mode: greenfield-bootstrap`. The C4 + module inventory describe the **target baseline** (what we're about to scaffold), the conventions catalog is the rule set the scaffold + every future feature follows. This is the same file brownfield mode produces, so downstream skills don't care which mode created it.
+Write `docs/architecture-map.md` from the template with `mode: greenfield-bootstrap`.
+
+- The C4 + the module inventory show the **target baseline**: the structure that the scaffold will make.
+- The conventions catalog is the set of rules for the scaffold and for each future feature.
+
+Brownfield mode writes the same file. Thus the downstream skills do not need to know which mode
+made it.
 
 ## G6 — Scaffold `tasks.json` contract (handed to `implement`)
 
-Emit `docs/features/_scaffold/tasks.json` (a repo-level, not per-feature, task set) so `implement` can materialize the skeleton. Same shape as the `tasks` contract, with `layer: scaffold`:
+Write `docs/features/_scaffold/tasks.json`. This is a repo-level task set, not a per-feature
+task set. `implement` uses it to make the skeleton. It has the same shape as the `tasks`
+contract, with `layer: scaffold`:
 
 ```json
 {
@@ -59,6 +93,15 @@ Emit `docs/features/_scaffold/tasks.json` (a repo-level, not per-feature, task s
 }
 ```
 
-**The skeleton smoke test is the TDD anchor.** Scaffold tasks have no feature AC, so `implement` anchors the red→green on the structural smoke test: RED = «the project does not build / boot / the tooling doesn't run», GREEN = «build + boot + empty test suite + migration tool all succeed». That keeps the engine's discipline meaningful for structural work (no per-folder TDD theatre). `implement` reads the foundation map for the exact conventions to scaffold to.
+**The skeleton smoke test is the TDD anchor.** Scaffold tasks have no feature AC. Thus
+`implement` uses the structural smoke test as the anchor for red→green:
 
-After scaffold: the repo is real, `docs/architecture-map.md` describes it, and the normal per-feature flow (`specify → … → implement`) builds features into it — `implement`'s feature tests are real TDD against a project that now boots.
+- RED = «the project does not build / boot / the tooling doesn't run».
+- GREEN = «build + boot + empty test suite + migration tool all succeed».
+
+This keeps the discipline of the engine useful for structural work. Do not do TDD for each folder
+only for show. `implement` reads the foundation map to get the exact conventions for the scaffold.
+
+After the scaffold, the repo is real, and `docs/architecture-map.md` describes it. The normal
+per-feature flow (`specify → … → implement`) adds features to it. The feature tests of
+`implement` are real TDD against a project that now boots.

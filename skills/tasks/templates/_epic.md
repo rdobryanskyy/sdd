@@ -4,7 +4,7 @@
 
 ## Goal
 
-<!-- instruction: 2–3 sentences — what shipping this epic delivers, tied to spec §2 Goals. -->
+<!-- instruction: 2–3 sentences. Tell what this epic gives when it ships. Connect it to spec §2 Goals. -->
 
 ## Scope
 
@@ -13,7 +13,7 @@
 
 ## Task map
 
-<!-- instruction: the dependency graph as a Mermaid flowchart. This is the same DAG as tasks.json. -->
+<!-- instruction: show the dependency graph as a Mermaid flowchart. It is the same DAG as tasks.json. -->
 
 ```mermaid
 flowchart LR
@@ -34,4 +34,4 @@ See [tracker.md](./tracker.md) for status. Machine contract: [tasks.json](../tas
 
 ## Risks / Hard rules
 
-<!-- instruction: any spec §6 NFR / sad §11 constraint a task must not violate. -->
+<!-- instruction: list each spec §6 NFR / sad §11 constraint that a task must not violate. -->

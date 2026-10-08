@@ -1,10 +1,11 @@
 /**
- * The one YAML-frontmatter parser the server uses. Deliberately minimal — the
- * SDD artifacts only ever carry flat `key: scalar` lines (mirroring the Python
- * validator's read_frontmatter), so this is a line scanner, not a YAML engine.
+ * The one YAML-frontmatter parser that the server uses. It is minimal on purpose.
+ * The SDD artifacts contain only flat `key: scalar` lines, the same as
+ * read_frontmatter in the Python validator. Thus this is a line scanner, not a
+ * YAML engine.
  *
- * Values are returned RAW (inline comments and quotes preserved); a caller that
- * needs config semantics normalizes with stripComment/unquote.
+ * The parser returns the values RAW, with the inline comments and quotes. If a
+ * caller must have config semantics, it normalizes the values with stripComment/unquote.
  */
 
 /** Top-level scalar keys of a leading `---` frontmatter block. */
@@ -20,7 +21,7 @@ export function frontmatter(text: string): Record<string, string> {
   return out
 }
 
-/** `[a, b]` or `a, b` → ['a', 'b']; quotes stripped per item. */
+/** `[a, b]` or `a, b` → ['a', 'b']. The quotes are removed from each item. */
 export function parseList(v: string | undefined): string[] {
   if (!v) return []
   let s = v.trim()
@@ -31,7 +32,7 @@ export function parseList(v: string | undefined): string[] {
     .filter(Boolean)
 }
 
-/** Config-value normalization: drop an inline `# comment`, strip outer quotes. */
+/** Normalize a config value: remove an inline `# comment` and the outer quotes. */
 export function configValue(raw: string): string {
   return raw.replace(/#.*$/, '').trim().replace(/^["']|["']$/g, '')
 }

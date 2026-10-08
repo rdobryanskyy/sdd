@@ -12,21 +12,21 @@ recurrence_of: <none | _fixes/<date>-<short>.md>
 ## Symptom
 
 <!-- The reproduction statement from intake, verbatim: «doing X, expected Y, got Z».
-     Plus scope: who hits it (one user / all), since when (release, commit, date). -->
+     Also the scope: who sees it (one user / all), and since when (release, commit, date). -->
 
 ## Root cause
 
-<!-- 2–4 sentences: the mechanism, the file:line, and why it slipped past the existing
-     tests (no test at that level? a too-weak assertion? an untested branch?). -->
+<!-- 2–4 sentences: the mechanism, the file:line, and why the existing tests did not find it
+     (no test at that level? an assertion that is too weak? a branch without a test?). -->
 
 ## The pinning test
 
 <!-- Test name + level (unit / integration / e2e) + the failing line QUOTED from the RED
-     run — the proof it failed for the right reason before the fix. -->
+     run. This is the proof that the test failed for the correct reason before the fix. -->
 
 ## Spec patch
 
-<!-- One of, per the triage branch:
+<!-- Write one of these, per the triage branch:
      (a) regression: «none — spec was right; AC-NN re-verified»
      (b) spec-bug:   the AC wording, before → after
      (c) gap:        the new AC text added to §5 (with its added-by-fix marker)
@@ -34,5 +34,5 @@ recurrence_of: <none | _fixes/<date>-<short>.md>
 
 ## Follow-ups
 
-<!-- Refactors / adjacent risks the fix exposed but deliberately did NOT touch (the fix
-     commit stays minimal) — each as one actionable line. Or «none». -->
+<!-- The refactors / adjacent risks that the fix showed but did NOT touch on purpose (the fix
+     commit stays minimal). Write each one as one line that a person can act on. Or «none». -->

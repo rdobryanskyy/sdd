@@ -4,87 +4,97 @@ model: opus
 effort: high
 agents: []
 description: >
-  Use BEFORE specify to stress-test a raw idea — pressure-test it before you commit to a
-  spec. A Socratic interview that surfaces hidden assumptions, names tradeoffs, exposes
-  imprecisions, and proposes fresh angles. Scope is any idea (product, content, business,
-  architecture, refactor approach), but in an SDD repo the natural exit is /sdd:specify on
-  the surviving idea. Triggers on "interview {slug}", "stress test {slug}", "challenge this",
+  Use BEFORE specify to stress-test a raw idea. Test it hard before you write a spec. This is a
+  Socratic interview. It finds hidden assumptions, names tradeoffs, shows imprecise points and
+  proposes new angles. The scope is any idea (product, content, business, architecture, refactor
+  approach). In an SDD repo, the usual exit is /sdd:specify on the idea that survives.
+  Triggers on "interview {slug}", "stress test {slug}", "challenge this",
   "poke holes", "rip this apart", "/sdd:interview {slug}", "grill it", "tear this idea apart",
-  "rip it apart". Runs 3 phases (understand intent → surface tradeoffs and weak spots → propose
-  new angles) via AskUserQuestion, ends with a summary of risks, alternatives, and the next
-  step. Optional — the backbone starts at specify; reach for interview when the idea itself
-  isn't settled yet.
+  "rip it apart". It runs 3 phases (understand intent → find tradeoffs and weak spots → propose
+  new angles) with AskUserQuestion. It ends with a summary of risks, alternatives and the next
+  step. Optional: the backbone starts at specify. Use interview when the idea itself is not
+  decided yet.
 ---
 
 # Skill: interview
 
-Pressure-tests an idea **before** it becomes a spec. The user shares a raw idea; across **3
-phases** you surface hidden assumptions, name tradeoffs, expose imprecisions, and propose
-fresh angles — then hand the survivor to `specify`. This is the optional pre-backbone step:
-it makes `specify` cheaper by killing or reshaping a weak idea before any spec gets written.
+This skill tests an idea hard **before** the idea becomes a spec. The user gives a raw idea. In
+**3 phases**, find hidden assumptions, name tradeoffs, show imprecise points and propose new
+angles. Then give the idea that survives to `specify`. This is the optional step before the
+backbone. It makes `specify` cheaper, because it stops or changes a weak idea before a spec exists.
 
-**Scope: any idea.** Product, content, business, architecture, refactor approach — all in
-scope. The boundary: this is an interview about the *idea*, not codebase archaeology. Ask the
-user to articulate the idea in words first. Consult files only if the user explicitly invites
-it; default is interview-first, no unprompted grep/find/read.
+**Scope: any idea.** Product, content, business, architecture and refactor approach are all in
+scope. The limit: this is an interview about the *idea*. It is not a study of the codebase. Ask
+the user to describe the idea in words first. Read files only if the user explicitly tells you
+to. The default is interview first, with no grep/find/read that the user did not ask for.
 
-**Language.** Respond in the user's language; the instructions here are English for clarity.
+**Language.** Reply in the language of the user. The instructions here are in English to make them clear.
 
 The depth dial and the Socratic posture are SDD-wide:
 → [`../_shared/interview-depth.md`](../_shared/interview-depth.md) · [`../_shared/ask-style.md`](../_shared/ask-style.md)
 
+English prose (artifacts, questions, reports, handoff) follows ASD-STE100 Simplified Technical English → [`../_shared/ste100.md`](../_shared/ste100.md).
+
 ## Depth dial — set this first
 
-One `AskUserQuestion`, then commit (**default medium**). The dial is SDD-wide; interview's
-delta — the **3–4 / 6–10 / 10–15** question budget per level and each level's posture — is the
+Ask one `AskUserQuestion`, then keep the answer (**default medium**). The dial is SDD-wide. The
 canonical `interview` row in [`../_shared/interview-depth.md`](../_shared/interview-depth.md)
-(no table duplicated here).
+gives the interview delta: the **3–4 / 6–10 / 10–15** question budget for each level and the
+posture of each level. Do not copy the table here.
 
-The adversarial triggers (grill / rip apart) imply **hard** unless the
-user says otherwise. State the depth in one line, then start.
+If the user uses an adversarial trigger (grill / rip apart), use **hard**, unless the user says
+a different depth. Tell the depth in one line, then start.
 
 ## Hard rules
 
-1. **Every question goes through AskUserQuestion**, not free text — 2-4 concrete options, the
-   first marked `(Recommended)`, each option's `description` spelling out what follows from it.
-   Free text slips into "I don't know" and loses signal.
-2. **One question at a time.** The user answers with full context on the previous answer, and
-   you adapt the next question to it.
-3. **Recommendation is mandatory.** Always carry a position inside the Recommended option — a
-   neutral interviewer surfaces less than one with a take the user can argue against.
-4. **Don't skip phases.** No alternatives before intent is clear; no grilling tradeoffs before
-   the idea is understood.
+1. **Ask each question through AskUserQuestion**, not as free text.
+   - Give 2-4 concrete options.
+   - Mark the first option `(Recommended)`.
+   - In the `description` of each option, tell what occurs if the user selects it.
+   - With free text, the user often says "I don't know", and you lose the signal.
+2. **Ask one question at a time.** The user answers with the full context of the previous
+   answer. Change the next question to agree with that answer.
+3. **A recommendation is mandatory.** Always put a position in the Recommended option. A neutral
+   interviewer finds less than an interviewer with an opinion that the user can argue against.
+4. **Do not skip phases.** Do not propose alternatives before the intent is clear. Do not test
+   tradeoffs hard before you understand the idea.
 
 ## Phases
 
-Use **1-3 questions per phase**, targeting the count from the depth dial. Move on from a phase
-when answers repeat, the user says "next" / "enough", or the latest answer added nothing.
+Use **1-3 questions in each phase**, and aim for the count from the depth dial. Go to the next
+phase if the answers repeat, if the user says "next" / "enough", or if the last answer added nothing.
 
 ### Phase 1 — Understand the idea
-If the idea isn't stated in one sentence yet, ask for it in plain text (no AskUserQuestion).
-Then unpack: who suffers without this · what success concretely looks like · whether it's new
-or a refinement. Don't ask what's already obvious.
+If the user did not give the idea in one sentence, ask for it in plain text (no AskUserQuestion).
+Then examine it: who has a problem without this · what success looks like in concrete terms ·
+whether it is new or an improvement. Do not ask about items that are already clear.
 
 ### Phase 2 — Stress-test tradeoffs and imprecisions
-The core. Hunt **hidden assumptions** ("this assumes X — what if X is false?"), **tradeoffs**
-(time vs quality, scope vs depth, reach vs focus), **imprecisions** (vague terms, ambiguous
-metrics), **attention competition**, and **cost of failure**. Every question offers positions,
-not yes/no.
+This phase is the core. Look for:
 
-**Probing frames** — internal lenses (premortem · second-order · naive listener · inversion ·
-cost of waiting · the other person). Pick what fits, mix them, don't name the frame to the
-user. Worked before/after examples per lens → [`references/probing-frames.md`](references/probing-frames.md).
+- **hidden assumptions** ("this assumes X. If X is false, what then?"),
+- **tradeoffs** (time vs quality, scope vs depth, reach vs focus),
+- **imprecisions** (vague terms, ambiguous metrics),
+- **competition for attention**,
+- **the cost of failure**.
 
-**Intensity dial.** Default tone is Socratic; the adversarial triggers escalate phrasing
-("Why do you think X is even true?"). The user dials back with "ease up" / "go easier".
+Each question gives positions, not yes/no.
 
-**Drill vs move on.** Drill the same dimension when an answer surfaced a new assumption; move
-on once the position is clear and the tradeoff named.
+**Probing frames** are internal lenses (premortem · second-order · naive listener · inversion ·
+cost of waiting · the other person). Pick the lenses that fit, and mix them. Do not tell the
+frame name to the user. For before/after examples for each lens → [`references/probing-frames.md`](references/probing-frames.md).
+
+**Intensity dial.** The default tone is Socratic. The adversarial triggers make the words
+stronger ("Why do you think that X is true at all?"). The user can make the tone softer with
+"ease up" / "go easier".
+
+**Drill vs move on.** If an answer showed a new assumption, ask more about the same dimension.
+If the position is clear and the tradeoff has a name, go to a different dimension.
 
 ### Phase 3 — Propose new angles
-Now actively propose via AskUserQuestion: 2-3 alternative shapes (different audience, format,
-scale) or a twist (inversion, constraint, simplification). The Recommended option is your
-strongest bet, with reasoning in `description`.
+Now propose new angles actively through AskUserQuestion. Give 2-3 alternative shapes (a
+different audience, format or scale) or a twist (inversion, constraint, simplification). The
+Recommended option is your strongest choice, with the reason in `description`.
 
 ## Final summary (plain text, not AskUserQuestion)
 
@@ -109,43 +119,47 @@ strongest bet, with reasoning in `description`.
 {one concrete verb — usually "/sdd:specify <slug>" once the idea survives}
 ```
 
-A full annotated medium-depth pass → [`references/annotated-pass.md`](references/annotated-pass.md).
+For a full medium-depth pass with notes → [`references/annotated-pass.md`](references/annotated-pass.md).
 
 ## Hand off
 
-interview writes **no files** — it sharpens the idea in the user's head, so the final summary
-checked against its mini/full format is this skill's **structural self-check**
-([`../_shared/self-check.md`](../_shared/self-check.md)) — nothing on disk to re-read. After the
-summary, **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md)
-(utility variant — `/clear` optional): *What I did* (the revised idea + its weakest spot) + *Review*
-(nothing on disk — the summary above is the artifact) + *Run next*: when the idea is a feature
-you intend to build, `/sdd:specify <slug>` turns the survivor into a spec; otherwise resume
-whatever you were doing. Never end on a bare «Next: …».
+interview writes **no files**. It makes the idea clearer in the mind of the user.
+
+- The **structural self-check** of this skill is a check of the final summary against its
+  mini/full format ([`../_shared/self-check.md`](../_shared/self-check.md)). There is no file on
+  the disk to read again.
+- After the summary, **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md)
+  (utility variant, `/clear` is optional):
+  - *What I did*: the revised idea + its weakest spot.
+  - *Review*: nothing on the disk. The summary above is the artifact.
+  - *Run next*: if the idea is a feature that you will build, `/sdd:specify <slug>` changes the
+    idea that survived into a spec. If not, continue the work that you did before.
+- Never end with only «Next: …».
 
 ## Anti-patterns
 
-- Asking "what exactly do you mean by X?" instead of offering 3 interpretations to pick between.
-- Generic advice ("think about the user") instead of a specific take.
-- Ending without a recommendation, or without naming the next step.
-- Dragging past the depth-dial ceiling — at medium the target is 6-10, not a marathon.
-- Reaching into the repo / running grep unprompted — the idea is articulated in words first.
+- You ask "what exactly do you mean by X?". Instead, give 3 interpretations for the user to select from.
+- You give general advice ("think about the user"). Instead, give a specific opinion.
+- You end without a recommendation, or without the name of the next step.
+- You continue after the limit of the depth dial. At medium, the target is 6-10 questions, not a very long session.
+- You read the repo or run grep when the user did not ask for it. The user describes the idea in words first.
 
 ## Edge cases
 
-- **Idea already mature** — skip most of Phase 1, sometimes to 1 question.
-- **User aborts with "ok summary"** — go straight to the final block with what's gathered.
-- **Idea turned out weak mid-interview** — say so plainly, then propose the reframe.
-- **Idea is for someone else** — re-route: "what would they say to question X?"
+- **The idea is already mature.** Skip most of Phase 1. Sometimes, ask only 1 question.
+- **The user stops with "ok summary".** Go directly to the final block with the information that you have.
+- **The idea is weak, and you find this during the interview.** Say this clearly, then propose the reframe.
+- **The idea is for a different person.** Change the route: "what would they say to question X?"
 
 ### Stuck protocol
-If the user picks **Other twice in a row** OR writes "I don't know", switch to a
-single open text question ("In your own words — what's bugging you most about this right now?").
-Once they answer, resume AskUserQuestion with a new angle.
+If the user selects **Other two times in sequence**, OR writes "I don't know", ask one open text
+question ("In your words — what is the largest problem with this idea now?"). After the user
+answers, use AskUserQuestion again with a new angle.
 
 ## References
 
-- [`references/probing-frames.md`](references/probing-frames.md) — the 6 lenses with worked before/after questions.
-- [`references/annotated-pass.md`](references/annotated-pass.md) — a full annotated medium-depth interview.
+- [`references/probing-frames.md`](references/probing-frames.md) — the 6 lenses, with before/after questions.
+- [`references/annotated-pass.md`](references/annotated-pass.md) — a full medium-depth interview with notes.
 - [`../_shared/interview-depth.md`](../_shared/interview-depth.md) — the SDD-wide easy/medium/hard dial.
-- [`../_shared/ask-style.md`](../_shared/ask-style.md) — the AskUserQuestion option-writing contract.
-- [`../_shared/handoff.md`](../_shared/handoff.md) — the stage-handoff block format.
+- [`../_shared/ask-style.md`](../_shared/ask-style.md) — the contract to write AskUserQuestion options.
+- [`../_shared/handoff.md`](../_shared/handoff.md) — the format of the stage-handoff block.

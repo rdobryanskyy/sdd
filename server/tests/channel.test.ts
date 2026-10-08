@@ -30,7 +30,7 @@ describe('buildCommand allowlist', () => {
 
   it('rejects a skill outside the allowlist', () => {
     expect(() => buildCommand('rm', 'x')).toThrow(/not allowed/)
-    expect(() => buildCommand('start', 'x')).toThrow(/not allowed/) // deliberately not driveable
+    expect(() => buildCommand('start', 'x')).toThrow(/not allowed/) // not allowed on purpose
     expect(SKILL_NAMES.has('implement')).toBe(true)
   })
 
@@ -179,6 +179,6 @@ describe('createAskRegistry', () => {
     for (let i = 0; i < 25; i++) reg.register(ask(`a${i}`))
     expect(reg.size()).toBe(20)
     expect(reg.take('a0')).toBeNull() // evicted
-    expect(reg.take('a24')?.id).toBe('a24') // newest survives
+    expect(reg.take('a24')?.id).toBe('a24') // the newest stays
   })
 })

@@ -1,18 +1,19 @@
 /**
  * Live dashboard refresh — fs.watch on <PROJECT>/docs/ → WS `refresh` frames.
  *
- * Closes the gap the explicit refresh frames leave open: dashboard_update/done
- * push a refresh only when Claude calls them, so a terminal-driven run (or a
- * plain `vim docs/…`) never reached the browser. This watcher makes ANY change
- * under docs/ push a refresh — the same frame type the browser already handles,
- * no new protocol.
+ * This watcher closes a gap in the explicit refresh frames. dashboard_update/done
+ * push a refresh only when Claude calls them. Thus a run from the terminal (or a
+ * plain `vim docs/…`) did not reach the browser. With this watcher, EACH change
+ * under docs/ pushes a refresh. It uses the frame type that the browser already
+ * handles, with no new protocol.
  *
- * The watcher never reads disk content — it only maps a changed path to a
- * refresh frame (slug-scoped when one feature changed, slugless otherwise).
- * All actual reads still go through the HTTP API and assertArtifactPath.
+ * The watcher never reads the disk content. It only maps a changed path to a
+ * refresh frame. The frame has a slug scope when one feature changed, and no slug
+ * in all other cases. All real reads still go through the HTTP API and
+ * assertArtifactPath.
  *
- * fs.watch and the timers are injected so the whole state machine is
- * unit-testable without a real filesystem or real time (see tests/watch.test.ts).
+ * The code injects fs.watch and the timers. Thus you can unit-test all of the
+ * state machine without a real filesystem or real time (see tests/watch.test.ts).
  */
 
 import { watch } from 'fs'
@@ -24,14 +25,14 @@ import type { Frame } from './channel.ts'
 
 export type Classification = { scope: 'feature'; slug: string } | { scope: 'root' }
 
-// Editor/OS noise that must never trigger a refresh: git internals, Finder
-// droppings, backup/swap/lock files, vim's `4913` write-probe.
+// Editor/OS noise that must never start a refresh: git internals, Finder files,
+// backup/swap/lock files, and the `4913` write-probe of vim.
 const IGNORED_BASENAME = /^(\.DS_Store|4913|#.*#)$|(~|\.sw[px]|\.tmp)$|^\.#/
 
 /**
- * Map an fs.watch-relative path (relative to docs/) to a refresh scope.
- * Returns null for noise that should not refresh anything. A null filename
- * (fs.watch may omit it) conservatively refreshes everything.
+ * Map a path from fs.watch (relative to docs/) to a refresh scope.
+ * Return null for noise that must not refresh anything. If the filename is null
+ * (fs.watch can omit it), refresh everything to be safe.
  */
 export function classifyPath(rel: string | null): Classification | null {
   if (rel == null) return { scope: 'root' }
@@ -46,13 +47,13 @@ export function classifyPath(rel: string | null): Classification | null {
     if (!isValidSlug(slug)) return null
     return { scope: 'feature', slug }
   }
-  return { scope: 'root' } // roadmap.md, architecture-map.md, anything docs-root
+  return { scope: 'root' } // roadmap.md, architecture-map.md, and all other files in the docs root
 }
 
 /**
- * Collapse a batch window's classifications into at most one refresh frame:
- * exactly one feature touched → slug-scoped; anything wider → slugless (the
- * browser's refresh(undefined) reloads everything).
+ * Combine the classifications of a batch window into one refresh frame or none:
+ * exactly one changed feature → a frame with a slug scope; a wider change → a
+ * frame with no slug (refresh(undefined) in the browser reloads everything).
  */
 export function coalesce(batch: Classification[]): Frame[] {
   if (batch.length === 0) return []
@@ -91,8 +92,8 @@ const defaultSchedule: Scheduler = {
 }
 
 const defaultWatchImpl: WatchImpl = (dir, onEvent, onError) => {
-  // Bun supports {recursive:true} on macOS and Linux. Throws ENOENT if the dir
-  // is missing — the caller's retry loop handles it.
+  // Bun supports {recursive:true} on macOS and Linux. If the dir is missing, this
+  // throws ENOENT. The retry loop of the caller handles it.
   const w = watch(dir, { recursive: true }, (_event, filename) => {
     onEvent(filename == null ? null : String(filename))
   })
@@ -109,7 +110,7 @@ const defaultWatchImpl: WatchImpl = (dir, onEvent, onError) => {
 // ---- the watcher state machine --------------------------------------------------
 
 export interface DocsWatcher {
-  /** Watch <projectDir>/docs. Idempotent for the same dir; re-arms for a new one. */
+  /** Watch <projectDir>/docs. Idempotent for the same dir. For a new dir, it arms again. */
   arm(projectDir: string): void
   /** Terminal — close the watcher and cancel all timers. */
   stop(): void
@@ -118,10 +119,10 @@ export interface DocsWatcher {
 export interface WatcherOpts {
   broadcast: (frame: Frame) => void
   log: (msg: string) => void
-  /** Batch window: events within it collapse to one frame. Fixed, not resettable —
-   *  a steady write stream (implement stage) must not starve the flush. */
+  /** Batch window: the events in it become one frame. The window is fixed and does
+   *  not reset. Thus a steady write stream (implement stage) cannot block the flush. */
   windowMs?: number
-  /** Re-arm interval while docs/ is missing or after the watcher dies. */
+  /** The interval to arm again when docs/ is missing or after the watcher dies. */
   retryMs?: number
   watchImpl?: WatchImpl
   schedule?: Scheduler
@@ -138,7 +139,7 @@ export function createDocsWatcher(opts: WatcherOpts): DocsWatcher {
   let retryTimer: unknown = null
   let batchTimer: unknown = null
   let batch: Classification[] = []
-  let resyncOnOpen = false // after a watcher death, one slugless refresh covers the gap
+  let resyncOnOpen = false // after the watcher dies, one refresh with no slug covers the gap
   let stopped = false
 
   function clearRetry(): void {
@@ -194,10 +195,11 @@ export function createDocsWatcher(opts: WatcherOpts): DocsWatcher {
       opts.log(`watching ${armedDir}`)
       if (resyncOnOpen) {
         resyncOnOpen = false
-        opts.broadcast({ type: 'refresh' }) // cover whatever changed while dead
+        opts.broadcast({ type: 'refresh' }) // cover all changes from the time when the watcher was dead
       }
     } catch {
-      // docs/ missing (pre-specify project) or transient — retry quietly.
+      // docs/ is missing (the project is before specify) or the error is
+      // temporary. Retry with no message.
       scheduleRetry()
     }
   }

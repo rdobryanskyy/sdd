@@ -1,6 +1,6 @@
 /**
- * frontmatter.ts — the one shared parser (state.ts artifact frontmatter +
- * server.ts settings both go through it).
+ * frontmatter.ts — the one shared parser (state.ts uses it for artifact
+ * frontmatter, and server.ts uses it for settings).
  */
 import { describe, it, expect } from 'bun:test'
 import { frontmatter, parseList, configValue } from '../frontmatter.ts'

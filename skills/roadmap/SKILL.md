@@ -4,73 +4,94 @@ model: inherit
 effort: medium
 agents: []
 description: >
-  Use to keep the portfolio layer above individual features — one living docs/roadmap.md of
-  outcomes, structured Now / Next / Later, that links to per-feature specs without duplicating
-  them. Triggers on "roadmap", "what's next", "prioritize the roadmap", "add to the roadmap",
+  Use to keep the portfolio layer above each feature. This is one living docs/roadmap.md of
+  outcomes, in the structure Now / Next / Later, that links to the specs of each feature and does not
+  copy them. Triggers on "roadmap", "what's next", "prioritize the roadmap", "add to the roadmap",
   "show the roadmap", "/sdd:roadmap", "roadmap", "what is next", "priorities", "add to the roadmap".
-  Captures a candidate as an outcome/problem (lands in Next/Later, RICE-scored), promotes/demotes
-  between horizons, and renders the board. It is outcome-altitude — NOT a feature list or a
-  dated Gantt; the solution lives in the feature's spec, not here. specify promotes an item to
-  Now; ship moves it to Shipped — so delivery keeps the roadmap in sync.
+  Records a candidate as an outcome/problem (it goes into Next/Later, with a RICE score). Promotes and
+  demotes items between horizons, and renders the board. It stays at outcome altitude. It is NOT a
+  feature list or a Gantt with dates. The solution is in the spec of the feature, not here. specify
+  promotes an item to Now. ship moves it to Shipped. Thus, delivery keeps the roadmap in sync.
 ---
 
 # Skill: roadmap
 
-The **portfolio layer** above the per-feature pipeline. SDD builds one feature at a time under `docs/features/<slug>/`; `roadmap` is the single living view *across* features — what we're doing now, what's next, what's directional later — kept at **outcome altitude** (the "why"/problem), with each item linking to its feature folder rather than restating the spec.
+This skill is the **portfolio layer** above the per-feature pipeline. SDD builds one feature at a time under `docs/features/<slug>/`. `roadmap` is the one living view *across* features. It shows:
 
-A roadmap is **direction, not a promise**, and **not a release plan**: feature-and-date roadmaps are the biggest source of waste — they project false certainty, go stale fastest the further out they reach, and commit to solutions before discovery. So this roadmap encodes *decreasing certainty over time* and never carries dates. Repo-level utility (like `survey`) — one file serves the whole repo. Question phrasing → [`../_shared/ask-style.md`](../_shared/ask-style.md).
+- what we do now,
+- what comes next,
+- what is directional for later.
 
-Item prose follows `artifact_language` — the `## Shipped` heading and the table structure stay English (the dashboard parses them) → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+The roadmap stays at **outcome altitude** (the "why", or the problem). Each item links to its feature folder. It does not repeat the spec.
+
+A roadmap is **direction, not a promise**, and it is **not a release plan**. Roadmaps of features with dates are the largest source of waste. They show false certainty. They become stale fastest when they go far into the future. They select solutions before discovery. Thus, this roadmap shows *less certainty over time*, and it never has dates.
+
+This skill is a repo-level utility (like `survey`). One file serves the full repo. For the question text → [`../_shared/ask-style.md`](../_shared/ask-style.md).
+
+The prose of each item follows `artifact_language`. The `## Shipped` heading and the table structure stay English, because the dashboard parses them → [`../_shared/artifact-language.md`](../_shared/artifact-language.md).
+
+English prose (artifacts, questions, reports, handoff) follows ASD-STE100 Simplified Technical English → [`../_shared/ste100.md`](../_shared/ste100.md).
 
 ## Owner
 
-Whoever owns product direction (PM / lead / the solo maintainer). They decide what's Now/Next/Later; the pipeline keeps statuses in sync.
+The person who owns the product direction (PM / lead / the solo maintainer). This person decides what is Now/Next/Later. The pipeline keeps the statuses in sync.
 
 ## Inputs
 
-- (Optional) a candidate to capture (an outcome/problem in one line), or an action: prioritize / promote / demote / render.
-- `docs/features/*/` — to link items to existing feature folders and read their status.
+- (Optional) a candidate to record (an outcome/problem in one line), or an action: prioritize / promote / demote / render.
+- `docs/features/*/` — use it to link items to existing feature folders and to read their status.
 
 ## Protocol
 
-1. **Lazy-create.** If `docs/roadmap.md` is absent, copy [`./templates/roadmap.md`](./templates/roadmap.md) there (the non-commitment disclaimer + the Now / Next / Later / Shipped sections, **each rendered as a table** — one row per item). One file, repo root `docs/`.
-2. **The three horizons — content type changes per horizon** (this is the load-bearing rule, not feature-everywhere):
-   - **Now** — committed work whose `docs/features/<slug>/` spec exists and is being built. Item = outcome one-liner + link to the feature folder + a status (designing / implementing / review). Promoted here only after `specify` (it's spec'd + committed).
-   - **Next** — problems/opportunities deliberately **NOT yet spec'd** — an outcome/problem one-liner + a RICE score, no feature folder yet. This is the prioritized candidate pool.
+1. **Lazy-create.** If `docs/roadmap.md` does not exist, copy [`./templates/roadmap.md`](./templates/roadmap.md) there. The template has the non-commitment disclaimer and the Now / Next / Later / Shipped sections. **Render each section as a table**, with one row for each item. Keep one file, in `docs/` at the repo root.
+2. **The three horizons — each horizon has a different content type.** This is the most important rule. Do not put features in all horizons.
+   - **Now** — committed work. Its `docs/features/<slug>/` spec exists, and the team builds it now. Item = a one-line outcome + a link to the feature folder + a status (designing / implementing / review). Promote an item here only after `specify` (it has a spec and a commitment).
+   - **Next** — problems/opportunities that are intentionally **NOT spec'd yet**. Item = a one-line outcome/problem + a RICE score. There is no feature folder yet. This is the prioritized pool of candidates.
    - **Later** — outcomes/themes, directional only. No features, no scores.
-3. **Capture a candidate** → add to **Next** (or Later) as an outcome/problem, RICE-scored. **Never** write a solution/feature spec here — that's `specify`'s job when the item is pulled into Now.
-4. **Prioritize (RICE).** For Next candidates, score `RICE = (Reach × Impact × Confidence) ÷ Effort` (Impact 3/2/1/0.5/0.25; Confidence 100/80/50%; Effort in person-weeks) → one sortable number; order Next by it descending. RICE is a guide, not a gate — the owner can override. → [`./templates/roadmap.md`](./templates/roadmap.md) shows the columns.
-5. **Promote / demote.** Move items between horizons as certainty changes. Promote Next→Now only when the item is about to be `specify`'d (committed). Demote freely; far-out items stay coarse.
-6. **Render / write.** Update `docs/roadmap.md`, set `updated_at`.
-7. **Structural self-check** — per [`../_shared/self-check.md`](../_shared/self-check.md): re-read `docs/roadmap.md` from disk and verify **4 items**: (1) every Now/Shipped row links to an **existing** `docs/features/<slug>/` folder (`test -d` each); (2) every Next row carries a RICE score and Next is sorted by it descending; (3) **zero dates** anywhere outside Shipped's shipped-date column (regex-scan for `\b20\d\d-` style dates — the no-dates rule is the genre); (4) `updated_at` = today. Fix + re-check ≤2 cycles; surface anything unresolved.
-8. **Commit + handoff.** Propose commit `roadmap: <what changed>`. Then **emit the stage-handoff block** per [`../_shared/handoff.md`](../_shared/handoff.md) (utility variant) — *What I did* (incl. «self-check: 4/4 pass») + *Review* (`docs/roadmap.md`) + *Run next*: resume your backbone stage; `/clear` optional.
+3. **Record a candidate.** Add it to **Next** (or Later) as an outcome/problem, with a RICE score. **Never** write a solution or a feature spec here. That is the work of `specify` when the item goes into Now.
+4. **Prioritize (RICE).** For each Next candidate, calculate `RICE = (Reach × Impact × Confidence) ÷ Effort`:
+   - Impact is 3/2/1/0.5/0.25.
+   - Confidence is 100/80/50%.
+   - Effort is in person-weeks.
+
+   The result is one number that you can sort. Sort Next by this number, largest first. RICE is a guide, not a gate. The owner can override it. → [`./templates/roadmap.md`](./templates/roadmap.md) shows the columns.
+5. **Promote / demote.** Move items between horizons when the certainty changes. Promote Next→Now only when the item will go into `specify` soon (committed). You can demote at any time. Items far in the future stay coarse.
+6. **Render / write.** Update `docs/roadmap.md`. Set `updated_at`.
+7. **Structural self-check** — as [`../_shared/self-check.md`](../_shared/self-check.md) specifies. Read `docs/roadmap.md` again from disk and make sure of **4 items**:
+   1. Each Now/Shipped row links to an **existing** `docs/features/<slug>/` folder (`test -d` for each).
+   2. Each Next row has a RICE score, and Next is sorted by it, largest first.
+   3. There are **zero dates** outside the shipped-date column of Shipped. Use a regex to find `\b20\d\d-` style dates. The no-dates rule defines this type of document.
+   4. `updated_at` = today.
+
+   Fix and check again for a maximum of 2 cycles. Show each item that is not resolved.
+8. **Commit + handoff.** Propose the commit `roadmap: <what changed>`. Then **emit the stage-handoff block** as [`../_shared/handoff.md`](../_shared/handoff.md) specifies (utility variant). It contains *What I did* (with «self-check: 4/4 pass»), *Review* (`docs/roadmap.md`) and *Run next*: go back to your backbone stage. `/clear` is optional.
 
 ## Sync hooks (delivery keeps it current — anti-drift)
 
-- **`specify`** registers its feature on the roadmap and promotes the item to **Now** (outcome one-liner + link to the new `docs/features/<slug>/` + status). A brand-new feature with no prior candidate is added directly to Now.
-- **`ship`** moves the item to **Shipped** (date + link to the PR/changelog) and removes it from Now.
-- **`fix`** (optional — the user's call): a **wide** fix on a shipped feature (>5 files / cross-module)
-  may append a note to that feature's **Shipped** row — the date + a link to the
-  `docs/features/<slug>/_fixes/` record. Small fixes don't touch the roadmap.
+- **`specify`** registers its feature on the roadmap and promotes the item to **Now** (a one-line outcome + a link to the new `docs/features/<slug>/` + a status). If a new feature has no candidate before it, `specify` adds it directly to Now.
+- **`ship`** moves the item to **Shipped** (the date + a link to the PR/changelog) and removes it from Now.
+- **`fix`** (optional — the decision of the user): a **wide** fix on a shipped feature (>5 files / cross-module)
+  can add a note to the **Shipped** row of that feature. The note has the date and a link to the
+  `docs/features/<slug>/_fixes/` record. Small fixes do not change the roadmap.
 
-Because the pipeline stages themselves update the roadmap, it stays current without separate upkeep — the same mechanism GitHub's public roadmap uses (ship → mark shipped → close).
+The pipeline stages themselves update the roadmap. Thus, it stays current without separate maintenance. The public roadmap of GitHub uses the same mechanism (ship → mark shipped → close).
 
 ## Definition of Done
 
-- `docs/roadmap.md` exists with the disclaimer + Now / Next / Later (+ Shipped), items at **outcome altitude**, each Now/Shipped item **linking** to its `docs/features/<slug>/` (no spec duplication).
-- Next is RICE-ordered; no dates anywhere; no feature-level detail in Later.
-- `updated_at` reflects the change.
+- `docs/roadmap.md` exists with the disclaimer and Now / Next / Later (+ Shipped). The items are at **outcome altitude**. Each Now/Shipped item **links** to its `docs/features/<slug>/` (no copy of the spec).
+- Next is in RICE order. There are no dates. Later has no feature-level detail.
+- `updated_at` shows the change.
 
 ## Anti-patterns
 
-- **A feature-and-date roadmap / a Gantt.** Items are outcomes/problems; dates are absent; the solution lives in the spec. This is the cardinal sin the research names as the biggest source of waste.
-- **Duplicating the spec** on the roadmap. Link to `docs/features/<slug>/`; the roadmap holds the *why*, not the *how*.
-- **Over-detailing Later.** Far-out items are directional one-liners — detailing them is fiction that goes stale.
-- **Roadmap-as-promise.** Keep the disclaimer; near-term is firm, far-term will change.
-- **Promoting to Now before `specify`.** Now = committed + spec'd; un-spec'd work stays in Next.
-- **Letting it rot.** The `specify`/`ship` hooks keep it live — don't bypass them with a stale hand-maintained list.
+- **A roadmap of features with dates, or a Gantt.** Items are outcomes/problems. There are no dates. The solution is in the spec. The research names this error as the largest source of waste.
+- **You copy the spec** into the roadmap. Link to `docs/features/<slug>/`. The roadmap holds the *why*, not the *how*.
+- **Too much detail in Later.** Items far in the future are directional one-line items. Detail for them is fiction that becomes stale.
+- **The roadmap as a promise.** Keep the disclaimer. Near-term items are firm. Far-term items will change.
+- **You promote to Now before `specify`.** Now = committed + spec'd. Work without a spec stays in Next.
+- **You let the roadmap become stale.** The `specify`/`ship` hooks keep it current. Do not replace them with a stale list that you maintain by hand.
 
 ## References & template
 
-- [`./templates/roadmap.md`](./templates/roadmap.md) — the living-roadmap scaffold (disclaimer + Now/Next/Later/Shipped + RICE columns).
-- [`../_shared/ask-style.md`](../_shared/ask-style.md) — phrasing for capture/prioritize questions.
+- [`./templates/roadmap.md`](./templates/roadmap.md) — the scaffold for the living roadmap (disclaimer + Now/Next/Later/Shipped + RICE columns).
+- [`../_shared/ask-style.md`](../_shared/ask-style.md) — the text style for capture/prioritize questions.

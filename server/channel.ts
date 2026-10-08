@@ -1,17 +1,18 @@
 /**
- * The dashboard channel — outbound tools Claude calls to push live progress to
- * the browser, plus the server-side allowlist that builds inbound `/sdd:` lines.
+ * The dashboard channel. It has two parts:
+ * - The outbound tools. Claude calls these tools to push live progress to the browser.
+ * - The server-side allowlist. It builds the inbound `/sdd:` lines.
  *
- * Re-skin of the Telegram channel: there, the "chat surface" is a Telegram chat;
- * here it is a browser tab. Claude replies OUTBOUND by calling these tools; the
- * server pushes INBOUND `/sdd:<skill> <slug>` commands via
- * notifications/claude/channel (built only from the allowlist below — never from
- * raw browser text).
+ * This file uses the pattern of the Telegram channel. In the Telegram channel, the
+ * chat surface is a Telegram chat. Here, it is a browser tab. Claude replies
+ * OUTBOUND when it calls these tools. The server pushes INBOUND
+ * `/sdd:<skill> <slug>` commands through notifications/claude/channel. The server
+ * builds these commands only from the allowlist below, never from raw browser text.
  */
 
-// The skills the dashboard is allowed to drive. A POST /api/command is rejected
-// unless `command` is in this set — the inbound `content` is then built from
-// validated parts only, so a browser can never inject arbitrary `/sdd:` text.
+// The skills that the dashboard can start. If `command` is not in this set, the
+// server rejects a POST /api/command. The server builds the inbound `content`
+// only from validated parts. Thus a browser cannot inject arbitrary `/sdd:` text.
 export const SKILL_NAMES = new Set([
   'survey',
   'specify',
@@ -42,10 +43,11 @@ export interface BuiltCommand {
 }
 
 /**
- * Build a literal `/sdd:<skill> <slug>` from validated parts. Throws on anything
- * not in the allowlist — the single chokepoint that keeps browser input from
- * becoming an arbitrary slash command. `depth` defaults to easy for dashboard
- * runs (the skill self-decides reversible calls, asks far fewer questions).
+ * Build a literal `/sdd:<skill> <slug>` from validated parts. If a part is not
+ * in the allowlist, this function throws. It is the single chokepoint. It makes
+ * sure that browser input cannot become an arbitrary slash command. For dashboard
+ * runs, the default `depth` is easy. Then the skill makes reversible decisions
+ * itself and asks far fewer questions.
  */
 export function buildCommand(
   command: string,
@@ -61,23 +63,24 @@ export function buildCommand(
     throw new Error(`invalid slug: ${slug}`)
   }
   const depth = opts.depth ?? 'easy'
-  // The type says easy|medium|hard, but the value arrives from a browser POST —
-  // validate at runtime too, or it splices into the command line.
+  // The type says easy|medium|hard, but the value comes from a browser POST.
+  // Validate it at runtime too. If not, the value goes into the command line.
   if (!DEPTHS.has(depth)) throw new Error(`invalid depth: ${depth}`)
-  // roadmap/survey are repo-wide — they still take the slug as a hint argument,
-  // which the skills tolerate; keeping one shape simple beats special-casing.
+  // The roadmap and survey skills are repo-wide. They still get the slug as a
+  // hint argument, and the skills accept it. One simple shape is better than a
+  // special case.
   const content = `/sdd:${skill} ${s} --depth=${depth}`
   return { content, skill, slug: s }
 }
 
 // ---- pending questions (dashboard_ask → POST /api/answer) -------------------
 //
-// The dashboard cannot answer a blocking AskUserQuestion (that UI lives in the
-// terminal host). dashboard_ask is the browser-compatible alternative: Claude
-// posts a question WITH options and ends its turn; the user's click comes back
-// as a channel message. Anti-injection holds because the browser only ever
-// sends an option INDEX — the label text relayed to Claude is the text Claude
-// itself authored here.
+// The dashboard cannot answer a blocking AskUserQuestion, because that UI is in
+// the terminal host. dashboard_ask is the alternative for the browser. Claude
+// posts a question WITH options and ends its turn. The click of the user comes
+// back as a channel message. The anti-injection protection stays valid, because
+// the browser sends only an option INDEX. The label text that goes to Claude is
+// the text that Claude itself wrote here.
 
 export interface AskOption {
   label: string
@@ -98,7 +101,8 @@ export function createAskRegistry() {
   const pending = new Map<string, PendingAsk>()
   return {
     register(ask: PendingAsk): void {
-      // Bounded: a run that leaks questions evicts its oldest, not our memory.
+      // The registry has a limit. If a run leaks questions, the registry removes
+      // the oldest question. Thus the memory use does not increase.
       while (pending.size >= MAX_PENDING_ASKS) {
         const oldest = pending.keys().next().value
         if (oldest == null) break
@@ -106,7 +110,7 @@ export function createAskRegistry() {
       }
       pending.set(ask.id, ask)
     },
-    /** Single-use claim — a question can be answered exactly once. */
+    /** Single-use claim. The user can answer a question only one time. */
     take(id: string): PendingAsk | null {
       const ask = pending.get(id) ?? null
       if (ask) pending.delete(id)
@@ -125,12 +129,12 @@ export type AskRegistry = ReturnType<typeof createAskRegistry>
 export type Frame = Record<string, unknown>
 
 export interface ChannelCtx {
-  /** Broadcast a WS frame to every connected dashboard client. The server tags
-   *  it with session_id + ts before sending. */
+  /** Broadcast a WS frame to all connected dashboard clients. Before the server
+   *  sends the frame, it adds session_id + ts to it. */
   broadcast: (frame: Frame) => void
-  /** Pending dashboard_ask questions, claimed by POST /api/answer. */
+  /** The pending dashboard_ask questions. POST /api/answer claims them. */
   asks: AskRegistry
-  /** Random id for a new question (injected for determinism in tests). */
+  /** A random id for a new question. Tests inject it to get deterministic results. */
   askId: () => string
 }
 
@@ -225,8 +229,8 @@ function str(v: unknown): string | undefined {
   return typeof v === 'string' ? v : undefined
 }
 
-/** Handle a dashboard_* tool call. Returns the MCP tool result, or null if the
- *  name is not a dashboard tool (server handles handshake separately). */
+/** Handle a dashboard_* tool call. Return the MCP tool result. If the name is not
+ *  a dashboard tool, return null. The server handles the handshake separately. */
 export function handleDashboardTool(
   name: string,
   args: Record<string, unknown>,

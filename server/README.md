@@ -1,31 +1,32 @@
 # SDD Visual Dashboard
 
 A local, **opt-in, read-only** browser dashboard for the SDD pipeline. It reads `docs/features/`
-straight off disk, renders every artifact, and **drives the pipeline** — a click in the browser sends
-a `/sdd:<skill> <slug>` command back into your live Claude Code session, which runs the skill and
-streams progress back to the browser. It never edits artifact text — all writes happen through the
-pipeline in the terminal.
+directly from the disk and renders each artifact. It also **controls the pipeline**. A click in the
+browser sends a `/sdd:<skill> <slug>` command to your live Claude Code session. The session runs the
+skill and streams the progress back to the browser. The dashboard never edits artifact text. All
+writes occur through the pipeline in the terminal.
 
-The whole thing is one Bun process (`server/`) that auto-starts as an MCP server when a Claude Code
-session opens. It holds the MCP channel to Claude **and** an embedded `Bun.serve()` HTTP+WS listener on
-`127.0.0.1`. The browser tab is just another channel — the same mechanism the official Telegram plugin
-uses to message a session, re-skinned as a dashboard.
+The dashboard is one Bun process (`server/`). This process starts automatically as an MCP server when
+a Claude Code session opens. It holds the MCP channel to Claude **and** an embedded `Bun.serve()`
+HTTP+WS listener on `127.0.0.1`. The browser tab is only one more channel. The official Telegram
+plugin uses the same mechanism to send messages to a session. Here, the mechanism has a dashboard UI.
 
-> **Pure-markdown users are unaffected.** Nothing binds, nothing opens, until you opt in.
+> **Pure-markdown users see no change.** Nothing binds and nothing opens before you opt in.
 
 ---
 
 ## Quick start
 
-**1. Install Bun** (the server runtime — the same dependency the Telegram plugin uses):
+**1. Install Bun** (the server runtime — the Telegram plugin uses the same dependency):
 
 ```bash
 curl -fsSL https://bun.sh/install | bash   # or: brew install bun
 bun --version                              # sanity check
 ```
 
-**2. Enable the dashboard** in your project's `.claude/sdd.local.md` (the file the pipeline
-auto-creates with documented defaults — `specify`/`implement`/`start` will create it if absent):
+**2. Enable the dashboard** in the `.claude/sdd.local.md` file of your project. The pipeline
+creates this file automatically with documented defaults. If the file is absent,
+`specify`/`implement`/`start` will create it:
 
 ```yaml
 dashboard_enabled: true    # opt in
@@ -38,13 +39,14 @@ dashboard_port: 4178       # optional — the loopback port (scans upward if bus
 /sdd:start
 ```
 
-It hands the server your project directory, confirms the channel works both ways, and prints the URL:
+It gives your project directory to the server, makes sure that the channel works in the two
+directions, and prints the URL:
 
 ```
 http://127.0.0.1:4178/?session=<id>&token=<capability-token>
 ```
 
-Open that URL in a browser. That's it.
+Open that URL in a browser. No other step is necessary.
 
 ---
 
@@ -52,63 +54,64 @@ Open that URL in a browser. That's it.
 
 | In the browser | What happens |
 |---|---|
-| **Pick a feature** (sidebar) | See its pipeline as a per-step checklist: `done` / `skipped` / `pending` / `blocked`, derived from the artifacts on disk. An XS feature shows *skipped* stages — not gaps. |
-| **Open an artifact** (tabs) | Renders markdown and **mermaid** (C4 / sequence / ER diagrams) from vendored libs, fully offline; mermaid (3.3 MB) loads lazily, only when an artifact actually contains a diagram. OpenAPI shows as plain YAML. |
-| **▶ Run next stage** / per-stage **run** | Sends `/sdd:<skill> <slug>` into your session. Claude runs the skill; the session-activity pane streams its log + the handoff. The topbar **depth** selector sets `--depth` (default `easy`). |
-| **⚒ Fix** (appears on a CHANGES REQUESTED review) | Runs `/sdd:fix <slug>` to address the review findings. |
+| **Pick a feature** (sidebar) | See its pipeline as a checklist with one item for each step: `done` / `skipped` / `pending` / `blocked`. The dashboard gets the status from the artifacts on the disk. An XS feature shows *skipped* stages, not gaps. |
+| **Open an artifact** (tabs) | The dashboard renders markdown and **mermaid** (C4 / sequence / ER diagrams) from vendored libs, fully offline. Mermaid (3.3 MB) loads lazily, only when an artifact contains a diagram. OpenAPI shows as plain YAML. |
+| **▶ Run next stage** / per-stage **run** | Sends `/sdd:<skill> <slug>` to your session. Claude runs the skill. The session-activity pane streams its log + the handoff. The topbar **depth** selector sets `--depth` (default `easy`). |
+| **⚒ Fix** (shows on a CHANGES REQUESTED review) | Runs `/sdd:fix <slug>` to correct the review findings. |
 | **+ new** | Runs `/sdd:specify <slug>` to start a new feature. |
-| **roadmap** modal | Renders `docs/roadmap.md`; its action buttons queue the repo-wide `/sdd:roadmap` and `/sdd:survey`. |
-| **Answer a decision question** | When a dashboard-driven run genuinely needs a human choice, a question card with option buttons appears in the activity pane (`dashboard_ask`) — your click resumes the paused run. Only the option *index* leaves the browser. |
-| **Change artifacts any other way** (a terminal-driven skill, `vim docs/…`) | The panel live-refreshes — `fs.watch` on `docs/` pushes a WS refresh within ~1 s. No dashboard involvement needed. |
+| **roadmap** modal | Renders `docs/roadmap.md`. Its action buttons queue the repo-wide `/sdd:roadmap` and `/sdd:survey`. |
+| **Answer a decision question** | If a run from the dashboard must have a human decision, a question card with option buttons shows in the activity pane (`dashboard_ask`). Your click continues the paused run. Only the option *index* goes out of the browser. |
+| **Change artifacts in a different way** (a skill from the terminal, `vim docs/…`) | The panel refreshes live. `fs.watch` on `docs/` pushes a WS refresh in about 1 s. You do not have to do anything in the dashboard. |
 
 ### It's a driver, not a remote control
 
-A click is consumed **only while your session is idle at the prompt**. If Claude is mid-task, the
-command **queues** (the UI says so — it never fakes synchronous execution). Dashboard-driven runs default
-to `--depth=easy`, so the skill self-decides reversible calls and asks far fewer questions — because the
-browser can't answer a blocking `AskUserQuestion`. When a dashboard-driven run genuinely needs a
-decision, Claude doesn't block: it posts the question **into the panel** via `dashboard_ask` (option
-buttons, no free text) and ends its turn; your click comes back as a channel message and the run
-resumes. Answering in **your terminal** always works too.
+The session uses a click **only when it is idle at the prompt**. If Claude is in a task, the
+command goes into a **queue**. The UI shows this. It never shows a false synchronous execution. The
+default for runs from the dashboard is `--depth=easy`. Then the skill makes reversible decisions itself
+and asks far fewer questions, because the browser cannot answer a blocking `AskUserQuestion`. If a run
+from the dashboard must have a decision, Claude does not block. It posts the question **in the panel**
+through `dashboard_ask` (option buttons, no free text) and ends its turn. Your click comes back as a
+channel message, and the run continues. You can also always answer in **your terminal**.
 
 ---
 
 ## Configuration
 
-Read from `.claude/sdd.local.md` (per-project, git-ignored):
+The server reads these keys from `.claude/sdd.local.md` (one file for each project, git-ignored):
 
 | Key | Default | Meaning |
 |---|---|---|
-| `dashboard_enabled` | `false` | Opt in. When false/absent the server stays idle (no HTTP bind). |
-| `dashboard_port` | `4178` | Loopback port to bind; scans `4178..4189` if busy. |
+| `dashboard_enabled` | `false` | Opt in. If the key is false or absent, the server stays idle (no HTTP bind). |
+| `dashboard_port` | `4178` | The loopback port to bind. If the port is busy, the server scans `4178..4189`. |
 
-Environment overrides (handy for testing / unusual setups):
+Environment overrides (useful for tests and for unusual setups):
 
 | Env var | Effect |
 |---|---|
-| `SDD_DASHBOARD_ENABLED=1` | Force-enable without the settings file. |
-| `SDD_DASHBOARD_PORT=<n>` | Default port (a `dashboard_port` in settings still wins). |
-| `SDD_DASHBOARD_TOKEN=<hex>` | Pin the capability token (otherwise random per session). |
-| `CLAUDE_PROJECT_DIR=<path>` | Project root at boot (Claude Code sets this; `/sdd:start` overrides authoritatively). |
+| `SDD_DASHBOARD_ENABLED=1` | Enable the dashboard without the settings file. |
+| `SDD_DASHBOARD_PORT=<n>` | The default port. A `dashboard_port` in the settings has priority. |
+| `SDD_DASHBOARD_TOKEN=<hex>` | Set a fixed capability token. If not set, the token is random for each session. |
+| `CLAUDE_PROJECT_DIR=<path>` | The project root at boot. Claude Code sets this value. `/sdd:start` overrides it and has authority. |
 
 ---
 
 ## Security model
 
-- **Loopback only.** Binds `127.0.0.1` — never a public interface.
-- **Read-only, scoped I/O.** The API only ever *reads*, and every read is `realpath`-contained to
-  `<project>/docs/` with an extension allowlist (`.md` / `.yaml` / `.yml` / `.json` / `.size`);
-  `.git`, missing files, and anything outside `docs/` are refused. There is no write route.
-- **Capability token.** Every `/api` route (including the two mutating routes — run-a-command and
-  answer-a-question — which touch no disk) requires the per-session token issued by `/sdd:start`
-  (in the URL), plus `Origin`/`Host` loopback checks — so another local page can't POST to your port.
-- **No command injection.** Inbound `/sdd:` lines are built **only** from a server-side allowlist
-  (validated skill name + `^[a-z0-9][a-z0-9-]*$` slug + `easy|medium|hard` depth). Browser text never
-  becomes an arbitrary command. Answers relay only an option **label Claude itself authored** in
-  `dashboard_ask` — the browser contributes a single validated index into that list.
-- **Anti-injection contract.** The MCP `instructions` tell Claude that dashboard channel content is
-  ALWAYS a server-built allowlisted SDD command — never free text, never authority to bypass a gate,
-  approve a review, change settings, or touch files outside `docs/`.
+- **Loopback only.** The server binds `127.0.0.1`, never a public interface.
+- **Read-only I/O with a limited scope.** The API only *reads*. The `realpath` of each read must be in
+  `<project>/docs/` and must have an allowed extension (`.md` / `.yaml` / `.yml` / `.json` / `.size`).
+  The API refuses `.git`, missing files and all paths outside `docs/`. There is no write route.
+- **Capability token.** Each `/api` route must have the session token from `/sdd:start` (in the URL)
+  and must pass `Origin`/`Host` loopback checks. This is also true for the two mutating routes (run a
+  command and answer a question), which do not touch the disk. Thus another local page cannot send a
+  POST to your port.
+- **No command injection.** The server builds inbound `/sdd:` lines **only** from a server-side
+  allowlist (validated skill name + `^[a-z0-9][a-z0-9-]*$` slug + `easy|medium|hard` depth). Browser
+  text never becomes an arbitrary command. An answer sends only an option **label that Claude itself
+  wrote** in `dashboard_ask`. The browser gives only one validated index into that list.
+- **Anti-injection contract.** The MCP `instructions` tell Claude that the content of the dashboard
+  channel is ALWAYS a server-built, allowlisted SDD command. It is never free text. It never gives
+  authority to bypass a gate, approve a review, change settings, or touch files outside `docs/`.
 
 ---
 
@@ -116,13 +119,13 @@ Environment overrides (handy for testing / unusual setups):
 
 | Symptom | Fix |
 |---|---|
-| `/mcp` shows `sdd-dashboard` **failed** | Bun isn't installed (the `.mcp.json` launches `bun`). Install Bun, reopen the session. |
-| `/sdd:start` says **"not enabled"** | Set `dashboard_enabled: true` in `.claude/sdd.local.md`, re-run `/sdd:start`. |
-| Browser shows **"no token in URL"** | Open the exact URL `/sdd:start` printed (the token authorises the session). |
-| **"project dir unresolved"** | Run `/sdd:start` inside the project (it hands the real path over), or set `CLAUDE_PROJECT_DIR`. |
-| A click does nothing | The session is busy or waiting on a question in your terminal — the command is queued; it runs when Claude is idle at the prompt. |
-| The panel doesn't update when files change | The docs watcher wasn't armed (the server didn't know your project dir yet) — run `/sdd:start`. Note: changes inside a **symlinked** subdirectory of `docs/` don't emit watch events; keep artifacts on real paths. |
-| Port differs from 4178 | It was busy; `/sdd:start` prints the actual port it bound. |
+| `/mcp` shows `sdd-dashboard` **failed** | Bun is not installed (the `.mcp.json` starts `bun`). Install Bun, then open the session again. |
+| `/sdd:start` says **"not enabled"** | Set `dashboard_enabled: true` in `.claude/sdd.local.md`, then run `/sdd:start` again. |
+| Browser shows **"no token in URL"** | Open the exact URL that `/sdd:start` printed. The token gives access to the session. |
+| **"project dir unresolved"** | Run `/sdd:start` in the project (it gives the real path to the server), or set `CLAUDE_PROJECT_DIR`. |
+| A click does nothing | The session is busy, or it waits for an answer to a question in your terminal. The command is in the queue. It runs when Claude is idle at the prompt. |
+| The panel does not update when files change | The docs watcher is not armed, because the server did not know your project dir. Run `/sdd:start`. Note: changes in a **symlinked** subdirectory of `docs/` do not emit watch events. Keep the artifacts on real paths. |
+| The port is not 4178 | Port 4178 was busy. `/sdd:start` prints the real port that the server bound. |
 
 ---
 
@@ -144,22 +147,23 @@ Environment overrides (handy for testing / unusual setups):
 ```
 
 - `server.ts` — MCP server + `Bun.serve()`, lifecycle hygiene, project-root resolver, WS keep-alive pings.
-- `http.ts` — the HTTP layer (routing, token/origin gating, the read-only JSON API) behind an
-  `HttpCtx` interface — testable without an MCP/stdio boot.
+- `http.ts` — the HTTP layer (routing, token/origin gate, the read-only JSON API) behind an
+  `HttpCtx` interface. You can test it without an MCP/stdio boot.
 - `state.ts` — disk → pipeline-stage derivation (the signal→stage table).
-- `channel.ts` — outbound `dashboard_*` tools + the inbound command allowlist + the pending-question
-  registry (`dashboard_ask` → `POST /api/answer`, single-use, bounded).
+- `channel.ts` — outbound `dashboard_*` tools + the inbound command allowlist + the registry of
+  pending questions (`dashboard_ask` → `POST /api/answer`, single-use, with a size limit).
 - `watch.ts` — live refresh: `fs.watch` on `<project>/docs/` (recursive), 250 ms coalescing window →
-  one `refresh` WS frame (slug-scoped when a single feature changed). Never reads file content —
-  it only maps a changed path to a frame; auto-re-arms if `docs/` is missing or the watcher dies.
+  one `refresh` WS frame (with a slug scope when one feature changed). It never reads file content.
+  It only maps a changed path to a frame. If `docs/` is missing or the watcher dies, it arms again
+  automatically.
 - `paths.ts` — `docs/` containment + extension allowlist.
 - `frontmatter.ts` — the one YAML-frontmatter parser (artifacts + settings).
 - `../dashboard/` — the static UI (vanilla JS) + vendored render libs (`marked`, lazy `mermaid`).
 
 ### WS frames (server → browser)
 
-The WS channel is **push-only** (the browser talks back over HTTP). Every frame carries
-`session_id` + `ts` plus:
+The WS channel is **push-only** (the browser replies over HTTP). Each frame has
+`session_id` + `ts` and these fields:
 
 | `type` | Sent when | Payload |
 |---|---|---|
@@ -169,17 +173,17 @@ The WS channel is **push-only** (the browser talks back over HTTP). Every frame 
 | `update` | Claude calls `dashboard_update` | `slug`, `stage`, `status`, `progress`, `message` |
 | `done` | Claude calls `dashboard_done` | `slug`, `stage`, `summary`, `verdict`, `review_files`, `next_command` |
 | `ask` | Claude calls `dashboard_ask` (a paused run needs a decision) | `ask_id`, `question`, `options[]`, `slug`, `stage` |
-| `answer` | an option was picked (any tab) — cards everywhere mark answered | `ask_id`, `option`, `label` |
-| `refresh` | `docs/` changed on disk (fs.watch), and after `dashboard_update`/`done` | optional `slug` — scoped reload; absent → reload everything |
+| `answer` | a user selected an option (in a tab) — all cards in all tabs show the answer | `ask_id`, `option`, `label` |
+| `refresh` | `docs/` changed on the disk (fs.watch), and after `dashboard_update`/`done` | optional `slug` — reload one feature; absent → reload everything |
 | `command` | a browser click queued a command | `command`, `request_id` |
 
-On (re)connect the browser re-syncs fully from disk, so frames missed while disconnected are never
-lost state — only lost narration.
+When the browser connects or connects again, it does a full re-sync from the disk. Thus, if the
+browser misses frames while it is disconnected, it does not lose state. It loses only the log text.
 
 ## Testing
 
-Deterministic runtime tests live in `server/tests/` (no network, committed fixture trees under
-`tests/fixtures/`) and run in CI as the `server-tests` job:
+The deterministic runtime tests are in `server/tests/` (no network, committed fixture trees under
+`tests/fixtures/`). CI runs them as the `server-tests` job:
 
 ```bash
 cd server
@@ -188,15 +192,19 @@ bunx tsc --noEmit   # typecheck (strict, bun-types)
 bun test tests/     # state derivation, path-security boundary, command allowlist, HTTP routing
 ```
 
-The suites: `state.test.ts` (signal→stage table, skipped-vs-pending, tracker parsing, review-verdict
-precedence, shipped regex), `paths.test.ts` (traversal / symlink escape / `.git` refusal / extension
-allowlist — throwaway `mkdtemp` trees), `channel.test.ts` (allowlist + injection cases,
-`dashboard_ask` + the question registry),
-`http.test.ts` (token/Origin gating, command + answer relay, removed-route regressions),
-`watch.test.ts` (path→frame classification, batch coalescing, the watcher state machine against
-injected fakes — the real `fs.watch` contract is timing-flaky in CI, so it is verified by a live
-smoke run instead), `frontmatter.test.ts`.
+The test suites:
 
-**Deferred (designed, not built):** multi-session parallelization (a shared hub with leader
-election). The MVP's choices — token per session, `session_id`-tagged WS frames, `/sdd:start`
-project handover — are already hub-compatible.
+- `state.test.ts` — signal→stage table, skipped or pending, tracker parse, the precedence of the
+  review verdict, shipped regex.
+- `paths.test.ts` — traversal / symlink escape / `.git` refusal / extension allowlist, with
+  temporary `mkdtemp` trees.
+- `channel.test.ts` — allowlist + injection cases, `dashboard_ask` + the question registry.
+- `http.test.ts` — token/Origin gate, command + answer relay, regressions for removed routes.
+- `watch.test.ts` — path→frame classification, batch coalescing, the watcher state machine with
+  injected fakes. The real `fs.watch` contract depends on timing and is flaky in CI. Thus a live
+  smoke run tests it.
+- `frontmatter.test.ts`.
+
+**Deferred (designed, not built):** parallel runs for many sessions (a shared hub with leader
+election). The MVP already agrees with a hub: one token for each session, WS frames with a
+`session_id` tag, and the project handover through `/sdd:start`.

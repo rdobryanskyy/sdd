@@ -14,19 +14,20 @@ status: "todo"
 
 ## Why
 
-<!-- instruction: 1–2 sentences. Link the upstream source, don't paste it:
+<!-- instruction: 1–2 sentences. Link to the upstream source. Do not paste it. Example:
 derives from [spec §AC-01](../spec.md), [sad §6](../sad.md), [ADR-0001](../adr/0001-....md). -->
 
 ## What
 
-<!-- instruction: the concrete change, scoped to ≤1 day / one reviewable PR. Name the files/dirs
-(same as files_hint). For a migration task: the **staged** up + down files under
-`docs/features/<slug>/migrations/<NN>_*` (which `implement` promotes into the live `migrations/`).
-For a ports task: the handler + its dto + errors. Keep it within one layer where possible. -->
+<!-- instruction: the concrete change. Its scope is ≤1 day / one PR that a reviewer can examine.
+Name the files/dirs (the same as files_hint). For a migration task: name the **staged** up + down
+files under `docs/features/<slug>/migrations/<NN>_*`. `implement` promotes them into the live
+`migrations/`. For a ports task: name the handler + its dto + errors. If possible, keep the change
+in one layer. -->
 
 ## Definition of Done
 
-<!-- instruction: testable bullets. e.g.: -->
+<!-- instruction: testable bullets. Examples: -->
 - [ ] <unit/integration test for this task passes>
 - [ ] <staged migration is promoted to live `migrations/`, then applies and reverts cleanly> (migration tasks)
 - [ ] <handler returns the spec'd outcome for AC-01> (ports tasks)
@@ -34,5 +35,5 @@ For a ports task: the handler + its dto + errors. Keep it within one layer where
 
 ## Notes
 
-<!-- instruction: gotchas, the lane this shares with another task (overlapping files_hint), any
-Hard Rule it must respect. -->
+<!-- instruction: write the hidden problems (gotchas). Name the lane that this task shares with a different task
+(overlapping files_hint). Name each Hard Rule that the task must obey. -->

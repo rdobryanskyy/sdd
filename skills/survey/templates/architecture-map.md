@@ -15,14 +15,15 @@ frontend: ""             # "" = no frontend; else the framework/kit, e.g. "react
 
 # Architecture map — <repo name>
 
-> The **current** architecture (what exists today), produced by `survey` and read by
-> specify / design / data-model / implement. Refresh with `survey` when the repo drifts past
-> `reflects_commit`. This is generated; a hand-maintained `docs/architecture.md`, if present, is
-> authoritative and reconciled below — not replaced.
+> The **current** architecture (what exists today). `survey` writes this map, and
+> specify / design / data-model / implement read it. If the repo changed after
+> `reflects_commit`, run `survey` again to refresh the map. This file is generated. If a
+> hand-maintained `docs/architecture.md` exists, it is authoritative. This map agrees with it
+> below and does not replace it.
 
 ## Stack
 
-<!-- instruction: primary language(s) + frameworks + versions, build/test tooling. Cited. -->
+<!-- instruction: give the primary language(s) + frameworks + versions, and the build/test tooling. Cite each item. -->
 
 - Language / runtime: <…> (`file`)
 - Frameworks: <…>
@@ -30,7 +31,7 @@ frontend: ""             # "" = no frontend; else the framework/kit, e.g. "react
 
 ## C4 — system as it is
 
-<!-- instruction: a C4 Context + Container of WHAT EXISTS (not a target design). Real names. -->
+<!-- instruction: draw a C4 Context + Container of WHAT EXISTS (not a target design). Use real names. -->
 
 ```mermaid
 C4Container
@@ -44,7 +45,7 @@ C4Container
 
 ## Module inventory
 
-<!-- instruction: one row per top-level module/package, with its layers + where it's wired. -->
+<!-- instruction: write one row for each top-level module/package, with its layers + the place where it is wired. -->
 
 | Module | Path | Layers | Wired at | Responsibility |
 |---|---|---|---|---|
@@ -52,17 +53,17 @@ C4Container
 
 ## Conventions (cited — the rules a new feature must match)
 
-<!-- instruction: the cross-cutting patterns, each with ONE cited example. These are what design/
-implement must conform to. -->
+<!-- instruction: give the cross-cutting patterns, each with ONE cited example. design/
+implement must obey these patterns. -->
 
 - **Module wiring / registration:** <pattern> — e.g. `<file:line>`
 - **Error handling:** <pattern> — `<file:line>`
 - **IDs:** <pattern> — `<file:line>`
 - **Persistence / DB access:** <pattern> — `<file:line>`
-- **Migrations:** <naming + tool> — `<file>` (the convention `data-model` detects and follows)
+- **Migrations:** <naming + tool> — `<file>` (`data-model` finds this convention and follows it)
 - **Tests:** <unit/integration style + harness> — `<file:line>`
 - **Inter-module communication:** <direct call / events / HTTP> — `<file:line>`
-- **UI / styling (if a frontend exists):** <component library + styling approach> — `<file:line>` (the `ui`-layer work composes these — detail in §Frontend / UI foundation below)
+- **UI / styling (if a frontend exists):** <component library + styling approach> — `<file:line>` (the `ui`-layer work composes these — the details are in §Frontend / UI foundation below)
 
 ## Datastores
 
@@ -71,9 +72,10 @@ implement must conform to. -->
 
 ## Frontend / UI foundation
 
-<!-- instruction: fill ONLY if the repo has a frontend (web / mobile / desktop). This is the UI to
-REUSE — the design system + components the new `ui`-layer work must COMPOSE / EXTEND, never reinvent.
-Skip with <!-- N/A: no frontend --> for a backend-only repo. Cite a file for each. -->
+<!-- instruction: fill this section ONLY if the repo has a frontend (web / mobile / desktop). This is
+the UI to REUSE. The new `ui`-layer work must COMPOSE / EXTEND this design system + these components.
+It must never make them again. For a backend-only repo, skip it with <!-- N/A: no frontend -->.
+Cite a file for each item. -->
 
 - **Component library / design system:** <in-repo `shared/ui/` and/or a 3rd-party kit> — `<path>`
 - **Design tokens:** <colors / spacing / typography source — theme config / CSS vars / token file> — `<file>`
@@ -84,20 +86,22 @@ Skip with <!-- N/A: no frontend --> for a backend-only repo. Cite a file for eac
 
 ## Where things live / closest precedents
 
-<!-- instruction: a short guide — "a feature like X lives here and looks like <precedent>". Helps
-design slot the new feature in and helps implement copy the right pattern. -->
+<!-- instruction: write a short guide — "a feature like X lives here and looks like <precedent>".
+This guide helps design put the new feature in the correct place. It helps implement copy the
+correct pattern. -->
 
 - A new <kind> feature → `<path>`, modelled on `<existing feature>` (`<file:line>`).
 - A new screen / UI component → composed from the existing design system (§Frontend), modelled on `<existing screen/component>` (`<file:line>`).
 
 ## Constraints & known tech-debt
 
-<!-- instruction: things a new feature must respect or work around — version pins, a module that
-forbids edits, an in-flight migration, a deprecated pattern. Feeds specify §2 / design §2 + §11. -->
+<!-- instruction: list the items that a new feature must obey or avoid. Examples: version pins, a
+module that forbids edits, a migration that is not complete, a deprecated pattern. specify §2 /
+design §2 + §11 use this list. -->
 
 - <constraint / debt> — <impact on new work>
 
 ## Reconciliation with the authored architecture doc
 
-<!-- instruction: if docs/architecture.md (or similar) exists, note alignment + any drift found.
-If none, say "no authored architecture doc; this map is the current reference." -->
+<!-- instruction: if docs/architecture.md (or a similar doc) exists, record where this map agrees
+with it + each drift that you find. If no such doc exists, say "no authored architecture doc; this map is the current reference." -->

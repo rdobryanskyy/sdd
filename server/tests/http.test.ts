@@ -1,8 +1,9 @@
 /**
- * http.ts — routing + gating tested through the plain fetch handler with a fake
- * ctx (no MCP, no stdio, no real socket). Covers token/Origin/Host gating, the
- * command happy path + 400s, the read-only regressions (PUT/chat → 404), the
- * artifact endpoint (x-sdd-mtime), and static traversal.
+ * http.ts — tests for the routing and the gates through the plain fetch handler
+ * with a fake ctx (no MCP, no stdio, no real socket). The tests cover the
+ * token/Origin/Host gates, the command happy path + 400s, the read-only
+ * regressions (PUT/chat → 404), the artifact endpoint (x-sdd-mtime), and static
+ * traversal.
  */
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { mkdtempSync, writeFileSync, rmSync } from 'fs'
@@ -61,7 +62,7 @@ function post(path: string, body: unknown, headers: Record<string, string> = {})
 
 const T = `token=${TOKEN}`
 
-// Response.json() is typed unknown — the tests assert loosely on purpose.
+// Response.json() has the type unknown. The tests use loose asserts on purpose.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function jsonOf(res: Response): Promise<any> {
   return res.json()
@@ -92,7 +93,7 @@ describe('token gating', () => {
   it('gates the WS upgrade on the token', async () => {
     expect((await handle(get('/ws')))!.status).toBe(401)
     const upgraded = await handle(get(`/ws?${T}`), { upgrade: () => true })
-    expect(upgraded).toBeUndefined() // handed off to the WS layer
+    expect(upgraded).toBeUndefined() // the WS layer handles it now
     expect((await handle(get(`/ws?${T}`), { upgrade: () => false }))!.status).toBe(426)
   })
 
@@ -185,7 +186,7 @@ describe('POST /api/command', () => {
       post(`/api/command?${T}`, { slug: 'x', command: 'design', depth: 'easy --dangerously-skip-permissions' }),
     ))!
     expect(bad.status).toBe(400)
-    expect(fake.notifications).toHaveLength(1) // only the valid one relayed
+    expect(fake.notifications).toHaveLength(1) // only the valid one was sent
   })
 })
 

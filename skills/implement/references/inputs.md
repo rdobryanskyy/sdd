@@ -2,52 +2,71 @@
 
 ## Hard gate
 
-`docs/features/<slug>/tasks.json` must exist and parse as JSON. Missing or malformed → refuse: «run `tasks <slug>` first (it emits tasks.json)». Do not try to reconstruct tasks from the markdown — `tasks.json` is the contract.
+`docs/features/<slug>/tasks.json` must exist and parse as JSON. If it is missing or malformed, refuse: «run `tasks <slug>` first (it emits tasks.json)». Do not try to make the tasks again from the markdown. `tasks.json` is the contract.
 
 ## Validate the contract
 
-The loaded `tasks.json` must satisfy the shape from the `tasks` skill:
+The loaded `tasks.json` must agree with the shape from the `tasks` skill:
 
-- top-level `{ slug, tasks: [...] }`.
-- each task: `id` (unique), `title`, `layer`, `deps` (array of existing ids), `acs` (array), `dod` (string), `files_hint` (array).
-- `deps` forms a DAG (no cycles) — verified in step 4. A cycle is a hard error: report the cycle and stop (it is a `tasks` bug, not an `implement` one).
+- The top level is `{ slug, tasks: [...] }`.
+- Each task has `id` (unique), `title`, `layer`, `deps` (an array of existing ids), `acs` (array), `dod` (string) and `files_hint` (array).
+- `deps` makes a DAG (no cycles). Step 4 examines this. A cycle is a hard error. Report the cycle and stop. The cycle is a `tasks` bug, not an `implement` bug.
 
 ## Scaffold task sets (from `survey` greenfield)
 
-A `tasks.json` with `slug: "_scaffold"` and `layer: scaffold` tasks comes from `survey`'s greenfield foundation (not from `tasks`). These tasks have **no feature `acs`** — they create the project skeleton (structure, baseline module, test harness, migration tooling, CI, conventions doc). Handle them specially:
+A `tasks.json` with `slug: "_scaffold"` and `layer: scaffold` tasks comes from the greenfield foundation of `survey`, not from `tasks`. These tasks have **no feature `acs`**. They create the project skeleton: structure, baseline module, test harness, migration tooling, CI and the conventions doc. Use these special rules for them:
 
-- **The skeleton smoke test is the red→green anchor**, not a feature AC: RED = «the project does not build / boot / the tooling doesn't run»; GREEN = «build + boot + the empty test suite + the migration tool all succeed». Write that smoke test as part of the scaffold (task S2 in the foundation contract) and drive the skeleton to make it pass — no per-folder TDD theatre.
-- Read `docs/architecture-map.md` (`mode: greenfield-bootstrap`) for the exact stack + conventions to scaffold to.
-- After the scaffold is green the repo is real, and the normal per-feature flow (`specify → … → implement`) builds into it with real feature TDD.
+- **The skeleton smoke test is the red→green anchor**, not a feature AC.
+  - RED = «the project does not build / boot / the tooling doesn't run».
+  - GREEN = «build + boot + the empty test suite + the migration tool all succeed».
+  - Write that smoke test as a part of the scaffold (task S2 in the foundation contract). Then build the skeleton until the test passes. Do not do TDD for each folder.
+- Read `docs/architecture-map.md` (`mode: greenfield-bootstrap`) to get the exact stack and conventions for the scaffold.
+- After the scaffold is green, the repo is real. Then the usual feature flow (`specify → … → implement`) builds into it with real feature TDD.
 
 ## Context the agents read directly
 
-The engine does **not** paste these into prompts — each agent (or the sequential runner) reads them itself, so there's no paraphrase drift:
+The engine does **not** paste these files into prompts. Each agent (or the sequential runner) reads them itself, so that no paraphrase changes their meaning:
 
-- `docs/features/<slug>/spec.md` — §5 acceptance criteria (the source of truth for what each test asserts).
-- `docs/features/<slug>/test-plan.md` — the AC→test map, if `plan-tests` ran. **For XS/S the plan is usually inline instead** — a `## Test plan` section in `spec.md` (per the size matrix); check both locations and read whichever exists.
-- `docs/features/<slug>/data-model.md` + the **staged** migration files under `docs/features/<slug>/migrations/` — the schema the code targets (a `layer: migration` task promotes them into the live `migrations/` tree; see «Staged migrations → promote» below).
-- `docs/features/<slug>/contracts/openapi.yaml` — the API contract handlers must match.
-- `docs/features/<slug>/sad.md` + Accepted `adr/` — the architecture and the locked decisions.
-- `docs/architecture-map.md` (from `survey`, if present) — the existing system's conventions the new code must match (module wiring, error handling, IDs, tests, migrations; **for a `ui` surface, §Frontend / UI foundation — the design system / components / tokens / styling to reuse**) + the closest precedent to copy (including the **closest UI precedent** for a new screen). Saves the agents re-discovering the patterns.
+- `docs/features/<slug>/spec.md` — the §5 acceptance criteria. They are the source of truth for each test assertion.
+- `docs/features/<slug>/test-plan.md` — the AC→test map, if `plan-tests` ran. **For XS/S, the plan is usually inline** in a `## Test plan` section in `spec.md` (from the size matrix). Examine the two locations and read the one that exists.
+- `docs/features/<slug>/data-model.md` and the **staged** migration files under `docs/features/<slug>/migrations/` — the schema for the code. A `layer: migration` task promotes them into the live `migrations/` tree (see «Staged migrations → promote» below).
+- `docs/features/<slug>/contracts/openapi.yaml` — the API contract that the handlers must agree with.
+- `docs/features/<slug>/sad.md` and the Accepted `adr/` — the architecture and the locked decisions.
+- `docs/architecture-map.md` (from `survey`, if it exists). This file gives two things, so that the agents do not have to find the patterns again:
+  - The conventions of the existing system that the new code must follow: module wiring, error handling, IDs, tests and migrations. **For a `ui` surface, read §Frontend / UI foundation** for the design system, components, tokens and styling to use again.
+  - The closest precedent to copy. For a new screen, this includes the **closest UI precedent**.
 
 ## Staged migrations → promote before running
 
-`data-model` stages each migration as `docs/features/<slug>/migrations/<NN>_<verb>_<entity>.up.sql` + `.down.sql` (feature-local ordinal) — **not** in the live `migrations/` tree, so a design-stage schema can't be applied to a real DB before the feature is built. The `layer: migration` task(s) own **promotion**:
+`data-model` stages each migration as `docs/features/<slug>/migrations/<NN>_<verb>_<entity>.up.sql` + `.down.sql`, with a feature-local ordinal. These files are **not** in the live `migrations/` tree. Thus, nobody can apply a design-stage schema to a real DB before the feature is built. The `layer: migration` tasks own the **promotion**:
 
-1. **Promote in ordinal order.** For each staged `<NN>_*` pair (ascending), copy it into the repo's live `migrations/` directory under the repo's detected convention — sequential → the **next free number** (`000023_*`); timestamped → a fresh timestamp — preserving the intra-feature order. The number is assigned **now, at promote-time**, so two features building around the same time never collide. The SQL body is copied **verbatim** — never rewritten during promotion. After promotion the live file is canonical; the staged copy is the frozen design record (git keeps it; don't hand-edit it).
-2. **Then apply + verify.** Run the migration with the repo's tool against the (ephemeral, testcontainers) DB; the task's DoD «migration applies and reverts cleanly» is checked on the promoted file. The feature's integration tests run against the promoted schema.
-3. **Commit** the promoted live file(s) with the migration task (the staged pair under `docs/features/<slug>/migrations/` was already committed by `data-model`).
+1. **Promote in ordinal order.** For each staged `<NN>_*` pair (in ascending order), copy it into the live `migrations/` directory of the repo. Use the detected convention of the repo:
+   - Sequential → the **next free number** (`000023_*`).
+   - Timestamped → a new timestamp.
+   - Keep the order inside the feature.
+   - Give the number **now, at promote-time**. Thus, two features that build at about the same time never get the same number.
+   - Copy the SQL body **verbatim**. Never write it again during promotion.
+   - After promotion, the live file is canonical. The staged copy is the frozen design record. Git keeps it. Do not edit it manually.
+2. **Then apply + verify.** Run the migration with the repo tool against the DB (ephemeral, testcontainers). Examine the task DoD «migration applies and reverts cleanly» on the promoted file. The integration tests of the feature run against the promoted schema.
+3. **Commit** the promoted live files with the migration task. `data-model` already committed the staged pair under `docs/features/<slug>/migrations/`.
 
-A `layer: migration` task with **no** staged file under the feature's `migrations/` is a `tasks`/`data-model` mismatch — surface it, do not invent SQL.
+If a `layer: migration` task has **no** staged file under the `migrations/` of the feature, there is a `tasks`/`data-model` mismatch. Report it. Do not write new SQL.
 
 ## `ui`-layer tasks
 
-A `layer: ui` task (present only when `sad.md` frontmatter `target_surfaces` declares a UI surface — `web-frontend` / `mobile-app` / `desktop-app`) runs through the **same TDD cycle** as any other task; it just follows the **repo's frontend test convention** — component / e2e-through-UI runners detected from `package.json` scripts (Playwright / Storybook / a visual-diff tool / etc.) — **not** a backend assumption. No engine change: command-detection already picks up frontend scripts in its cascade.
+A `layer: ui` task exists only when the `sad.md` frontmatter `target_surfaces` declares a UI surface (`web-frontend` / `mobile-app` / `desktop-app`). This task runs through the **same TDD cycle** as all other tasks. But it follows the **frontend test convention of the repo**, not a backend assumption. The engine detects the component or e2e-through-UI runners from the `package.json` scripts (Playwright / Storybook / a visual-diff tool / etc.). The engine does not change: command-detection already finds frontend scripts in its cascade.
 
-**Reuse the UI foundation (don't reinvent).** A `ui` task **composes the existing design system** from `architecture-map.md` §Frontend — reuse the existing components / shared primitives, pull design tokens (colors / spacing / typography) from the repo's token source, and build in the repo's **one** styling approach. Find the **closest existing screen/component** (the §Frontend UI precedent) and extend/compose it; write a **new** component only when no existing primitive fits, in the repo's styling approach — never a second one. This is the frontend echo of "match the repo + copy the closest precedent" → [`../../_shared/surfaces.md`](../../_shared/surfaces.md).
+**Use the UI foundation again (do not make a new one).** A `ui` task **composes the existing design system** from `architecture-map.md` §Frontend:
+
+- Use the existing components and shared primitives again.
+- Get the design tokens (colors / spacing / typography) from the token source of the repo.
+- Build with the **one** styling approach of the repo.
+- Find the **closest existing screen or component** (the §Frontend UI precedent). Extend or compose it.
+- Write a **new** component only when no existing primitive is applicable. Use the styling approach of the repo. Never add a second approach.
+
+This is the frontend form of the rule "follow the repo + copy the closest precedent" → [`../../_shared/surfaces.md`](../../_shared/surfaces.md).
 
 ## Repo state
 
-- Note the current branch. If `branch_strategy: feature` and the repo is on its default branch, create/switch to a feature branch before any commit (see [`settings.md`](./settings.md)).
-- Do not touch unrelated dirty changes — work only the files each task's `files_hint` names.
+- Record the current branch. If `branch_strategy: feature` and the repo is on its default branch, create or go to a feature branch before a commit (see [`settings.md`](./settings.md)).
+- Do not touch unrelated dirty changes. Change only the files that the `files_hint` of each task names.

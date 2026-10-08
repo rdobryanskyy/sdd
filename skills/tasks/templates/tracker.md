@@ -1,6 +1,6 @@
 # Tracker — <slug>
 
-> Status of every task in the epic. `implement` updates `done` as it commits each task.
+> The status of each task in the epic. When `implement` commits a task, it sets the status to `done`.
 > States: `todo` · `in_progress` · `blocked` · `review` · `done`.
 
 | # | Task | Layer | Owner | Estimate | Blocked by | Status |

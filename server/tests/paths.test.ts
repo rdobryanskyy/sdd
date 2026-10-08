@@ -1,7 +1,8 @@
 /**
  * paths.ts — the security boundary: project-dir resolution refusals, docs/
  * containment (traversal + symlink escape), the extension allowlist, and the
- * .git refusal. Uses throwaway mkdtemp trees (symlinks can't live in fixtures).
+ * .git refusal. The tests use temporary mkdtemp trees, because fixtures cannot
+ * contain symlinks.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, realpathSync } from 'fs'
@@ -15,7 +16,7 @@ import {
   contentTypeFor,
 } from '../paths.ts'
 
-const REPO_ROOT = resolve(import.meta.dir, '..', '..') // the plugin's own root
+const REPO_ROOT = resolve(import.meta.dir, '..', '..') // the root of the plugin itself
 
 let tmp: string
 let outside: string

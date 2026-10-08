@@ -1,28 +1,33 @@
 # Blast-radius heuristic — when an architectural decision becomes ADR-worthy
 
-> **TL;DR.** *Blast radius* measures how painful it will be to reverse a decision in three months. The three criteria are: (1) rework takes ≥3 days (irreversible); (2) ≥2 modules see it; (3) a legitimate alternative exists. **2 of 3 → ADR.** 0 stays inline in `sad.md`. Expect 5–12 ADRs for an M-size feature.
+> **TL;DR.** *Blast radius* measures how difficult it will be to reverse a decision in three months. There are three criteria:
+> 1. The rework takes ≥3 days (irreversible).
+> 2. ≥2 modules see the decision.
+> 3. A legitimate alternative exists.
+>
+> **2 of 3 → ADR.** 0 stays inline in `sad.md`. Expect 5–12 ADRs for an M-size feature.
 
-The skill makes 15–30 decisions per pass. Without a gate you'd either spawn one ADR per decision (noise — kills the genre) or zero (loses the *why* of the important ones). The blast-radius heuristic picks the right 5–12. It is design's per-skill Socratic gate, run on every **Approved** decision (see [`./socratic.md`](./socratic.md)).
+The skill makes 15–30 decisions in each pass. Without a gate, you write one ADR for each decision, or zero ADRs. One for each decision is noise and destroys the genre. Zero loses the *why* of the important decisions. The blast-radius heuristic selects the correct 5–12. It is the Socratic gate of design, and it runs on each **Approved** decision (see [`./socratic.md`](./socratic.md)).
 
 ## The three criteria
 
-A decision crosses the threshold if it scores **2 of 3** (a single criterion = borderline, ask explicitly).
+A decision crosses the threshold if it gets **2 of 3**. A single criterion is a borderline. Then ask the user clearly.
 
 ### 1. Irreversible
 
 > If we picked a different option three months from now, would the rework take ≥3 days?
 
-**Fires** for, e.g.:
+This criterion **fires** for these examples:
 
-- **Storage shape** — relational vs document vs object store; moving later means a data migration measured in weeks.
-- **Sync vs async module coupling** — a direct call vs a background event changes the data shape and the failure model of everything downstream.
-- **ID strategy** — random vs time-sortable vs auto-increment; switching later needs a *backfill* (a script that walks every existing row and rewrites its id, read-locking those rows while it runs).
-- **Auth model** — sessions vs per-request tokens; changes the shape of every request.
-- **Sharding / partition key** — the key data is spread across servers by; changing it later means re-clustering everything.
+- **Storage shape** — relational vs document vs object store. A later change needs a data migration that takes weeks.
+- **Sync vs async module coupling** — a direct call vs a background event. This changes the data shape and the failure model of all downstream parts.
+- **ID strategy** — random vs time-sortable vs auto-increment. A later change needs a *backfill*. A backfill is a script that reads each existing row and writes a new id. It read-locks those rows while it runs.
+- **Auth model** — sessions vs per-request tokens. This changes the shape of each request.
+- **Sharding / partition key** — the key that spreads the data across servers. A later change needs a re-cluster of all data.
 
-**Does not fire** for, e.g.:
+This criterion **does not fire** for these examples:
 
-- **Library choice within the same language** (two equivalent libraries for the same job) — rework is search-and-replace, a few hours.
+- **Library choice within the same language** (two equivalent libraries for the same job) — the rework is search-and-replace, a few hours.
 - **A configuration value** (a 5s vs 10s timeout) — one PR.
 - **Naming** (`objective` vs `title`) — the IDE renames it in a minute.
 
@@ -30,42 +35,52 @@ A decision crosses the threshold if it scores **2 of 3** (a single criterion = b
 
 > Does this decision change a contract seen by ≥2 modules?
 
-**Fires** for: an event schema crossing module boundaries; a shared error-code namespace; a pagination convention used by several endpoints; a migration adding a column other modules read.
+This criterion **fires** for: an event schema across module boundaries; a shared error-code namespace; a pagination convention that many endpoints use; a migration that adds a column that other modules read.
 
-**Does not fire** for: an internal function name inside one module; a private method signature; a log format used by only one component.
+This criterion **does not fire** for: an internal function name in one module; a private method signature; a log format that only one component uses.
 
 ### 3. Has legitimate alternatives
 
 > Will a reader six months from now ask «why not X?» where X is a real, non-strawman alternative?
 
-**Excludes:** decisions where the alternative is obviously worse (no strawman ADRs); decisions where the alternative is ruled out by an existing constraint (no ADR for «we used the language the repo is already written in»).
+**Excludes:**
 
-**Catches:** choices that look arbitrary from the code (why *this* cache TTL? why *this* circuit-breaker threshold?); trade-offs where two reasonable engineers would pick differently; anything where the option set was 2–3 serious options, not 1.
+- Decisions where the alternative is clearly worse (no strawman ADRs).
+- Decisions where an existing constraint excludes the alternative (no ADR for «we used the language the repo is already written in»).
+
+**Catches:**
+
+- Choices that look arbitrary in the code (why *this* cache TTL? why *this* circuit-breaker threshold?).
+- Trade-offs where two reasonable engineers would select differently.
+- All decisions where the option set had 2–3 serious options, not 1.
 
 ## Using the heuristic during the Socratic pass
 
 After each `AskUserQuestion` choice:
 
-1. **Score it** — how many of the three fire?
-2. **Decide:** 0 → inline, no ADR. 1 → borderline (default inline, except §4 Solution Strategy where the bar is lower because strategy is broad by definition). 2+ → ADR.
-3. **On a borderline,** ask explicitly: «This is borderline ADR-worthy because of <criterion>. Lock as ADR or keep inline?» with `Lock as ADR` (Recommended if irreversible) / `Inline only`.
+1. **Score it.** Count how many of the three criteria fire.
+2. **Decide:**
+   - 0 → inline, no ADR.
+   - 1 → borderline. The default is inline. The exception is §4 Solution Strategy, where the bar is lower, because strategy is broad by definition.
+   - 2+ → ADR.
+3. **On a borderline,** ask clearly: «This is borderline ADR-worthy because of <criterion>. Lock as ADR or keep inline?» Give the options `Lock as ADR` (Recommended if irreversible) / `Inline only`.
 
 ## Why 5–12 per M feature
 
-- **Below 5:** probably under-ADR-ing (missed an irreversibility) — unless the feature is genuinely XS/S (2–4 is fine).
-- **5–12:** healthy for an M feature; each ADR is a real decision with reread value.
-- **Above 12:** probably over-ADR-ing — bundle, re-scope, or move tactical detail inline. L/XL may justify 10–15.
+- **Below 5:** probably too few ADRs (you missed an irreversibility). The exception is a real XS/S feature, where 2–4 is correct.
+- **5–12:** correct for an M feature. Each ADR is a real decision that people will read again.
+- **Above 12:** probably too many ADRs. Combine them, change their scope, or move tactical details inline. L/XL can have 10–15.
 
 ## Closing self-review
 
-1. Does §9 reference every file in `adr/`? No orphans.
-2. Does every ADR have a Status (`Accepted`) and a Decision outcome (not just a Context)?
-3. For each ADR — would the heuristic still gate it if you ran it again? (Did you ADR-ify a trivial config value?)
-4. For inline decisions — does any feel like it should have been an ADR? Promote it.
+1. Does §9 refer to each file in `adr/`? No orphans.
+2. Does each ADR have a Status (`Accepted`) and a Decision outcome (not only a Context)?
+3. For each ADR: if you run the heuristic again, does it still gate the ADR? (Did you make an ADR for a trivial config value?)
+4. For inline decisions: does one of them look like an ADR? If yes, promote it.
 
 ## Anti-patterns
 
-- **ADR-ifying the alternative you rejected.** The ADR is about the chosen path; alternatives go in `## Considered options`, not their own file.
-- **An ADR with `Status: Proposed` from this skill.** Synchronous decisions with the user → `Accepted`. Use `decide-adr` for asynchronous Proposed → Accepted flows.
-- **One ADR per quality goal.** Quality goals live in §10; ADRs document the specific *decisions* taken because of them.
+- **An ADR for the alternative that you rejected.** The ADR is about the selected path. Put the alternatives in `## Considered options`, not in their own file.
+- **An ADR with `Status: Proposed` from this skill.** Synchronous decisions with the user → `Accepted`. For asynchronous Proposed → Accepted flows, use `decide-adr`.
+- **One ADR for each quality goal.** Quality goals are in §10. ADRs record the specific *decisions* that the team made because of them.
 - **A title that names the problem, not the decision.** `0003-rate-limiting.md` (bad) vs `0003-sliding-window-counter.md` (good).

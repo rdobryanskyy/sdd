@@ -1,6 +1,7 @@
 /**
- * state.ts — disk → pipeline derivation, tested through the public API only
- * (listFeatures / getFeatureDetail / getRoadmap) against committed fixture trees.
+ * state.ts — tests for the disk → pipeline derivation. The tests use only the
+ * public API (listFeatures / getFeatureDetail / getRoadmap) on committed fixture
+ * trees.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'bun:test'
 import { join } from 'path'
@@ -30,8 +31,9 @@ describe('project-a', () => {
     features = listFeatures()
   })
 
-  // Bun hoists every beforeAll in the file ahead of the first test, so another
-  // describe's hook can steal the module-level project dir — re-pin it per test.
+  // Bun moves every beforeAll in the file before the first test. Thus the hook of
+  // another describe can take the module-level project dir. Set it again for
+  // each test.
   beforeEach(() => {
     setProjectDir(PROJECT_A)
   })
@@ -97,7 +99,7 @@ describe('project-a', () => {
       expect(stageStatus(f, 'sequences')).toBe('skipped')
       expect(stageStatus(f, 'data-model')).toBe('skipped')
       expect(stageStatus(f, 'api')).toBe('skipped')
-      // ahead of the furthest stage nothing is "skipped" — it's pending/blocked
+      // after the furthest stage, no stage is "skipped" — it is pending/blocked
       expect(stageStatus(f, 'plan-tests')).toBe('pending')
       expect(stageStatus(f, 'implement')).toBe('pending')
       expect(stageStatus(f, 'review')).toBe('blocked')
@@ -112,7 +114,7 @@ describe('project-a', () => {
   describe('tracker parsing', () => {
     it('counts T-rows only, normalizes states, ignores the — placeholder row', () => {
       const f = bySlug(features, 'in-progress')
-      // T1 done + T2 Done = 2 done; T3 "in progress" + T4 todo counted; T5 "—" ignored
+      // T1 done + T2 Done = 2 done; T3 "in progress" + T4 todo are counted; T5 "—" is ignored
       expect(f.progress).toEqual({ done: 2, total: 4, pct: 50 })
       expect(stageStatus(f, 'implement')).toBe('done') // started ⇒ implement detected
     })

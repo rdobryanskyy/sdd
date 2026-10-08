@@ -1,18 +1,18 @@
-<!-- Template for `sequences` — embedded INLINE in docs/features/<slug>/sad.md §6 (Runtime view). -->
-<!-- One `### <flow name>` block per critical flow. Participants are GENERIC placeholders — -->
-<!-- replace the <…> message/note text with this flow's specifics, NOT the participant names. -->
-<!-- Generic vocabulary (the only allowed participants): -->
-<!--   <client>          — whatever initiates the flow (UI, CLI, another service, a scheduler) -->
+<!-- Template for `sequences`. Put it INLINE in docs/features/<slug>/sad.md §6 (Runtime view). -->
+<!-- Write one `### <flow name>` block for each critical flow. Participants are GENERIC placeholders. -->
+<!-- Replace the <…> message text and note text with the specifics of this flow. Do NOT replace the participant names. -->
+<!-- Generic vocabulary (only these participants are permitted): -->
+<!--   <client>          — the item that starts the flow (UI, CLI, a different service, a scheduler) -->
 <!--   <service>         — the building block that owns this flow (from §5) -->
-<!--   <data-store>      — the persistent store the service reads/writes -->
-<!--   <external-system> — a third party the service calls out to -->
-<!--   <message-bus>     — async transport (queue / event stream) for non-sync flows -->
-<!-- Naming the concrete technology is `design`/`data-model`'s job, not the runtime view's. -->
+<!--   <data-store>      — the persistent store that the service reads and writes -->
+<!--   <external-system> — a third party that the service calls -->
+<!--   <message-bus>     — the async transport (queue / event stream) for flows that are not sync -->
+<!-- `design`/`data-model` name the concrete technology. The runtime view does not. -->
 
 ### <flow name>
 
-<!-- SYNC flow: request → response, with the error branches the spec's acceptance criteria demand. -->
-<!-- Every write becomes a persist note so `data-model` knows what to index downstream. -->
+<!-- SYNC flow: request → response, with the error branches that the acceptance criteria of the spec demand. -->
+<!-- Each write becomes a persist note. Then `data-model` knows what to index downstream. -->
 
 ```mermaid
 sequenceDiagram
@@ -40,8 +40,8 @@ sequenceDiagram
 
 ### <async flow name>
 
-<!-- ASYNC flow (webhook in / scheduled job / queued or event-driven step / third-party callback). -->
-<!-- MUST include: idempotency-key check as the first handler step, a retry note, a dead-letter branch. -->
+<!-- ASYNC flow (incoming webhook / scheduled job / queued or event-driven step / third-party callback). -->
+<!-- MUST have: an idempotency-key check as the first step of the handler, a retry note, a dead-letter branch. -->
 
 ```mermaid
 sequenceDiagram

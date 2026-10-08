@@ -1,25 +1,27 @@
 #!/usr/bin/env bash
-# SDD installer for Codex CLI and Cursor (Claude Code installs natively via /plugin).
+# SDD installer for Codex CLI and Cursor (Claude Code installs natively through /plugin).
 #
-# SKILL.md is the open Agent Skills format, so both tools run the repo's skills unchanged.
-# The script copies the skills/ + agents/ subtree VERBATIM under <skills-root>/sdd/ (the
-# relative cross-links between skills, _shared/ and agents/ keep resolving by construction),
-# prefixes every skill name with `sdd-` (the bare review/design/api would collide with
-# generic names), and generates the host tool's functional agents from agents/*.md.
-# How each Claude-specific mechanism maps: skills/_shared/tool-adapters.md.
+# SKILL.md uses the open Agent Skills format. Thus both tools run the skills of the repo
+# with no change. The script does these steps:
+# - It copies the skills/ + agents/ subtree VERBATIM under <skills-root>/sdd/. Thus the
+#   relative cross-links between skills, _shared/ and agents/ continue to resolve.
+# - It adds the prefix `sdd-` to each skill name. The bare names review/design/api can
+#   have a conflict with generic names.
+# - It generates the functional agents of the host tool from agents/*.md.
+# For the map of each Claude-specific mechanism, see skills/_shared/tool-adapters.md.
 #
 # Usage:
 #   install.sh <codex|cursor|claude> [--global] [--prefix DIR] [--ref REF] [--src DIR] [--uninstall]
 #
-#   codex | cursor   target tool (claude just prints the native /plugin commands)
+#   codex | cursor   target tool (claude only prints the native /plugin commands)
 #   --global         install under $HOME instead of the current directory
-#   --prefix DIR     install under DIR (overrides --global and $PWD; mainly for testing)
+#   --prefix DIR     install under DIR (overrides --global and $PWD; mainly for tests)
 #   --ref REF        git ref of rdobryanskyy/sdd to download (default: main)
 #   --src DIR        install from a local checkout instead of downloading
 #   --uninstall      remove a previous install from the chosen prefix and exit
 #
-# Dependencies: curl + tar (download mode); python3 only for Codex custom agents (optional —
-# without it the skills still install and agent dispatch degrades to inline).
+# Dependencies: curl + tar (download mode); python3 only for Codex custom agents (optional.
+# If python3 is not available, the skills still install, and the agents run inline).
 
 set -euo pipefail
 
@@ -85,9 +87,9 @@ if [ "$UNINSTALL" = 1 ]; then
 fi
 
 # --- resolve the source tree -------------------------------------------------------------
-# cleanup also rolls back a PARTIAL install: if the script dies after the copy started but
-# before the summary (INSTALL_DONE=1), the half-copied tree + generated agents are removed —
-# the prefix is left clean, not with a silently broken install.
+# cleanup also reverts a PARTIAL install. If the script stops after the copy started but
+# before the summary (INSTALL_DONE=1), cleanup removes the half-copied tree and the generated
+# agents. Thus the prefix stays clean, without a broken install that nobody sees.
 CLEANUP_DIR=""
 INSTALL_DONE=0
 cleanup() {
@@ -113,10 +115,10 @@ fi
 [ -f "$SRC/skills/specify/SKILL.md" ] \
   || die "source $SRC does not look like the sdd repo (skills/specify/SKILL.md missing)"
 
-# --- collision check: a marketplace install would list every skill twice ------------------
-# `codex plugin marketplace add` registers the ORIGINAL names ($specify); this script installs
-# the sdd- prefixed copies. Both at once → a doubled skill list. Warn, don't block (README:
-# "pick one of the two paths").
+# --- collision check: a marketplace install lists each skill two times -------------------
+# `codex plugin marketplace add` registers the ORIGINAL names ($specify). This script installs
+# the copies with the sdd- prefix. If both are installed, the skill list shows each skill two
+# times. Show a warning, but do not stop (README: "pick one of the two paths").
 if [ "$TOOL" = "codex" ] && [ -f "$HOME/.codex/config.toml" ] \
    && grep -q 'plugins."sdd@' "$HOME/.codex/config.toml" 2>/dev/null; then
   warn "a marketplace install of sdd is already registered in ~/.codex/config.toml — adding the script install too will list each skill twice (\$specify AND \$sdd-specify); pick one path (see README), or remove the marketplace plugin"
@@ -128,10 +130,10 @@ cp -R "$SRC/skills" "$SKILLS_ROOT/sdd/skills"
 cp -R "$SRC/agents" "$SKILLS_ROOT/sdd/agents"
 
 # --- rename pass: frontmatter `name: <base>` → `name: sdd-<base>` ------------------------
-# The repo validator guarantees the exact line `name: <dirname>` AND that every skill dir name
-# matches [a-z0-9-]+ (no BRE metacharacters), so interpolating $base into the sed pattern is
-# safe on both GNU and BSD sed. A new skill with ./_+ etc. in its dir name would break this —
-# the validator rejects it first.
+# The repo validator makes sure of two things: the exact line `name: <dirname>` is present,
+# AND each skill dir name matches [a-z0-9-]+ (no BRE metacharacters). Thus it is safe to put
+# $base into the sed pattern on both GNU and BSD sed. A new skill with ./_+ (or a similar
+# character) in its dir name can break this, but the validator rejects that skill first.
 n_skills=0
 for skill_md in "$SKILLS_ROOT"/sdd/skills/*/SKILL.md; do
   base="$(basename "$(dirname "$skill_md")")"
@@ -144,7 +146,7 @@ for skill_md in "$SKILLS_ROOT"/sdd/skills/*/SKILL.md; do
 done
 
 # --- functional agents per tool -----------------------------------------------------------
-# (the verbatim copies under sdd/agents/ stay as documentation the skills cross-link)
+# (the verbatim copies under sdd/agents/ stay as documentation that the skills link to)
 mkdir -p "$AGENTS_DIR"
 n_agents=0
 
@@ -160,7 +162,7 @@ if [ "$TOOL" = "cursor" ]; then
       || die "agent rewrite failed for $agent_md (expected the exact line 'name: ${n}')"
     n_agents=$((n_agents + 1))
   done
-else # codex: generate .codex/agents/sdd-<name>.toml (needs python3 — folded YAML description)
+else # codex: generate .codex/agents/sdd-<name>.toml (python3 is necessary for the folded YAML description)
   if command -v python3 >/dev/null 2>&1; then
     python3 - "$SRC/agents" "$AGENTS_DIR" <<'PYEOF'
 import functools

@@ -1,10 +1,11 @@
 /**
- * State derivation — disk is the source of truth.
+ * State derivation. The disk is the source of truth.
  *
- * Each feature's pipeline is a per-step checklist (done / skipped / pending /
- * blocked), NOT a linear cursor: clarify / sequences / data-model / api /
- * plan-tests are legitimately N/A-skippable for XS/S, so a missing artifact is
- * labelled `skipped` (the pipeline moved past it) vs `pending` (it's next).
+ * The pipeline of each feature is a checklist with one item for each step
+ * (done / skipped / pending / blocked). It is NOT a linear cursor. For XS/S, the
+ * pipeline can correctly skip clarify / sequences / data-model / api /
+ * plan-tests as N/A. Thus a missing artifact gets the label `skipped` (the
+ * pipeline went past it) or `pending` (it is the next step).
  *
  * The signal→stage table (from the plan):
  *   docs/features/<slug>/            → created
@@ -111,7 +112,7 @@ function parseTracker(text: string | null): Tracker | null {
     const t = line.trim()
     if (!t.startsWith('|')) continue
     const cells = t.split('|').map((c) => c.trim())
-    // | #  | Task | ... | Status |  → cells[0] and last are '' from edge pipes
+    // | #  | Task | ... | Status |  → cells[0] and the last cell are '' because of the edge pipes
     const inner = cells.slice(1, -1)
     if (inner.length < 2) continue
     const id = inner[0]
@@ -135,8 +136,8 @@ function latestReviewVerdict(reviewDir: string): 'PASS' | 'CHANGES REQUESTED' | 
   if (files.length === 0) return null
   const latest = files[files.length - 1]
   const text = readIf(join(reviewDir, latest)) ?? ''
-  // "CHANGES REQUESTED" must be checked before "PASS" (a file may mention both;
-  // the gate result line is what matters — prefer the explicit changes verdict).
+  // Examine "CHANGES REQUESTED" before "PASS". A file can contain both, but only
+  // the gate result line is important. Prefer the explicit changes verdict.
   if (/CHANGES\s+REQUESTED/i.test(text)) return 'CHANGES REQUESTED'
   if (/\bPASS(ED)?\b/i.test(text)) return 'PASS'
   return null
@@ -239,13 +240,13 @@ function deriveStages(s: Signals): { stages: Stage[]; furthest: string } {
   })
 
   const status: StageStatus[] = new Array(STAGE_DEFS.length)
-  // pass 1 — done + skipped (anything absent but already passed)
+  // pass 1 — done + skipped (an absent stage that the pipeline already passed)
   for (let i = 0; i < STAGE_DEFS.length; i++) {
     if (detected[i] === true) status[i] = 'done'
     else if (i < lastDetected) status[i] = 'skipped'
     else status[i] = null as unknown as StageStatus // resolved in pass 2
   }
-  // pass 2 — pending vs blocked for the not-yet-reached stages (left→right)
+  // pass 2 — pending or blocked, for the stages that the pipeline did not reach yet (left→right)
   for (let i = 0; i < STAGE_DEFS.length; i++) {
     if (status[i]) continue
     let blocked = false
@@ -349,7 +350,7 @@ export function listFeatures(): FeatureSummary[] {
 }
 
 const KIND_BY_NAME: Array<[RegExp, Artifact['kind'], string]> = [
-  // openapi renders as plain text in the read-only dashboard (no redoc)
+  // the read-only dashboard shows openapi as plain text (no redoc)
   [/^contracts\/openapi\.ya?ml$/i, 'text', 'OpenAPI contract'],
   [/\.ya?ml$/i, 'text', 'YAML'],
   [/\.json$/i, 'json', 'JSON'],
@@ -361,7 +362,7 @@ function artifactMeta(rel: string): { kind: Artifact['kind']; label: string } {
   for (const [re, kind, label] of KIND_BY_NAME) {
     if (re.test(rel)) return { kind, label }
   }
-  // Friendly labels for the well-known markdown artifacts.
+  // Clear labels for the known markdown artifacts.
   const labels: Record<string, string> = {
     'spec.md': 'Spec',
     'sad.md': 'Architecture (SAD)',
@@ -385,7 +386,7 @@ function artifactMeta(rel: string): { kind: Artifact['kind']; label: string } {
 function walkArtifacts(dir: string, base: string, depth: number, acc: Artifact[]): void {
   if (depth > 4) return
   for (const name of lsIf(dir)) {
-    if (name === 'migrations') continue // *.sql is outside the served allowlist
+    if (name === 'migrations') continue // *.sql is not in the allowlist of served files
     const abs = join(dir, name)
     let st
     try {

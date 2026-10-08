@@ -10,7 +10,7 @@ feature_size: "<from .size>"
 
 ## ER diagram
 
-<!-- instruction: a clean, manually-ordered erDiagram. One block, no auto-layout. -->
+<!-- instruction: a clean erDiagram that you put in order manually. One block, no auto-layout. -->
 
 ```mermaid
 erDiagram
@@ -24,10 +24,10 @@ erDiagram
 
 ## Entities
 
-<!-- instruction: one subsection per entity, grouped by aggregate root. Types are written in
-your target database's vocabulary (the examples below use Postgres-style names; substitute your
-DB's equivalent). The examples are ILLUSTRATIVE, not mandates — PK type, audit columns
-(created_at / updated_at / none), and constraint usage all follow the REPO's conventions. -->
+<!-- instruction: one subsection for each entity, grouped by aggregate root. Write the types in
+the vocabulary of your target database. The examples below use Postgres-style names. Use the
+equivalent names of your DB. The examples are ILLUSTRATIVE, not mandates. The PK type, the audit
+columns (created_at / updated_at / none) and the constraint usage follow the conventions of the REPO. -->
 
 ### `<entity>`
 
@@ -42,13 +42,13 @@ DB's equivalent). The examples are ILLUSTRATIVE, not mandates — PK type, audit
 **Access patterns:** <pattern> → index `<idx_name>` on `<columns>`.
 **Constraints:** UNIQUE on `<...>`; FK → `<other>(id)`.
 
-<!-- The constraint set (UNIQUE / NOT NULL / FK / DEFAULT / CHECK / triggers) follows the REPO's
-conventions — match what the codebase already does; data-model neither imposes nor forbids a style. -->
+<!-- The constraint set (UNIQUE / NOT NULL / FK / DEFAULT / CHECK / triggers) follows the conventions
+of the REPO. Do the same as the codebase does now. data-model does not apply a style and does not forbid a style. -->
 
 ## Indexes
 
-<!-- instruction: one row per index, each justified by a concrete query from a sequence diagram.
-No "just in case" indexes. -->
+<!-- instruction: one row for each index. A concrete query from a sequence diagram is the reason
+for each index. No "just in case" indexes. -->
 
 | Index | Columns | Query it serves |
 |---|---|---|
@@ -56,7 +56,7 @@ No "just in case" indexes. -->
 
 ## Test fixtures
 
-<!-- instruction: list the fixture factories/builders generated for tests, in the form your repo
-uses (factory functions, fixtures, builders). NOT in migrations/. PII guard: example.test only. -->
+<!-- instruction: list the fixture factories/builders that you made for tests. Use the form that
+your repo uses (factory functions, fixtures, builders). NOT in migrations/. PII guard: example.test only. -->
 
 - `<NewEntity>(...)` — <what it builds>.

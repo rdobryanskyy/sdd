@@ -1,8 +1,8 @@
 # Changelog — <slug>
 
-<!-- instruction: what changed + why, not a file list. Link the spec and the load-bearing ADRs.
-Include the operational note (migrations, feature flags) the deployer needs. Keep it readable by
-someone who didn't write the feature. -->
+<!-- instruction: write what changed and why, not a file list. Link the spec and the key ADRs.
+Include the operational note (migrations, feature flags) that the deployer must have. Write it so
+that a person who did not write the feature can read it. Write English prose in ASD-STE100. -->
 
 ## <slug> — <one-line summary>
 

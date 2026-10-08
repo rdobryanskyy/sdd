@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SDD eval harness — on-demand, NOT CI (it invokes `claude` and costs tokens).
+# SDD eval harness — on demand, NOT CI (it starts `claude` and uses tokens).
 #
 #   ./evals/run.sh                      # all scenarios
 #   ./evals/run.sh design-gate-refusal  # one (or more) by name
@@ -8,10 +8,10 @@
 set -euo pipefail
 
 EVALS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$EVALS_DIR/.." && pwd)"   # the sdd plugin under test — loaded via --plugin-dir
+REPO_ROOT="$(cd "$EVALS_DIR/.." && pwd)"   # the sdd plugin under test, loaded with --plugin-dir
 MAX_TURNS="${SDD_EVAL_MAX_TURNS:-40}"
-# NB: an EMPTY array + `set -u` breaks on macOS bash 3.2 — expand with the
-# ${arr[@]+"${arr[@]}"} idiom everywhere.
+# NOTE: an EMPTY array + `set -u` fails on macOS bash 3.2. Expand arrays with the
+# ${arr[@]+"${arr[@]}"} pattern in all places.
 MODEL_ARGS=()
 [ -n "${SDD_EVAL_MODEL:-}" ] && MODEL_ARGS=(--model "$SDD_EVAL_MODEL")
 
@@ -25,7 +25,7 @@ run_scenario() {
 
   local work meta
   work="$(mktemp -d "${TMPDIR:-/tmp}/sdd-eval-$name.XXXXXX")"
-  meta="$(mktemp -d "${TMPDIR:-/tmp}/sdd-eval-$name-meta.XXXXXX")" # transcript + judge prompt live OUTSIDE the repo under test
+  meta="$(mktemp -d "${TMPDIR:-/tmp}/sdd-eval-$name-meta.XXXXXX")" # transcript + judge prompt are OUTSIDE the repo under test
   echo "== $name  (workdir: $work)"
 
   # 1. Fixture → git baseline.
@@ -34,13 +34,13 @@ run_scenario() {
   git -C "$work" add -A
   git -C "$work" -c user.email=eval@sdd -c user.name=sdd-eval commit -qm baseline
 
-  # 2. The run under test — headless; the prompt pins --depth=easy (a headless
-  #    run cannot answer AskUserQuestion). --plugin-dir loads the sdd plugin
-  #    from THIS checkout, so the eval exercises the working tree, not whatever
-  #    version happens to be installed.
-  # --allowedTools lets the run actually `git commit` in the throwaway workdir —
-  # without it, acceptEdits blocks commits and commit-cadence rubrics go vacuous
-  # (0 commits observed regardless of the skill's real cadence).
+  # 2. The run under test is headless. The prompt sets --depth=easy, because a
+  #    headless run cannot answer AskUserQuestion. --plugin-dir loads the sdd
+  #    plugin from THIS checkout. Thus the eval tests the working tree, not the
+  #    version that is installed.
+  # --allowedTools lets the run do a real `git commit` in the temporary workdir.
+  # Without it, acceptEdits blocks commits, and the commit-cadence rubrics become
+  # empty (0 commits, whatever the real cadence of the skill is).
   local out="$meta/run.json"
   ( cd "$work" && claude -p "$(cat "$dir/prompt.txt")" \
       --plugin-dir "$REPO_ROOT" \
@@ -48,15 +48,16 @@ run_scenario() {
       --allowedTools "Bash(git:*)" \
       --output-format json ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} > "$out" ) || true
 
-  # --output-format json is an object in some CLI versions, an array of
-  # messages (result last) in others — accept both.
+  # --output-format json is an object in some CLI versions and an array of
+  # messages (result last) in other versions. Accept both.
   local extract='if type=="array" then (last.result // empty) else (.result // empty) end'
   local final_msg tree gitlog diff
   final_msg="$(jq -r "$extract" "$out" 2>/dev/null | tail -c 4000 || true)"
   tree="$(cd "$work" && find . -path ./.git -prune -o -type f -print | sort)"
   gitlog="$(git -C "$work" log --oneline | head -30)"
-  # Diff vs the FIXTURE BASELINE (the root commit), not vs HEAD — so the judge sees the
-  # run's full change (committed + uncommitted) even when the run made its own commits.
+  # Diff against the FIXTURE BASELINE (the root commit), not against HEAD. Thus the judge
+  # sees the full change of the run (committed + uncommitted), also when the run made its
+  # own commits.
   local base
   base="$(git -C "$work" rev-list --max-parents=0 HEAD)"
   git -C "$work" add -A
@@ -83,7 +84,7 @@ run_scenario() {
   [ "$verdict" = "PASS" ]
 }
 
-# No args → every scenario (dir names are kebab-case, splitting is safe).
+# No args → every scenario (dir names are kebab-case, thus word splitting is safe).
 if [ "$#" -eq 0 ]; then
   # shellcheck disable=SC2046
   set -- $(ls "$EVALS_DIR/scenarios")

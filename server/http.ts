@@ -1,13 +1,16 @@
 /**
- * HTTP layer of the SDD dashboard server — routing, token/origin gating, and
- * the read-only API. Extracted from server.ts so the whole surface is testable
- * with a plain fetch handler + a fake ctx (no MCP/stdio boot required).
+ * The HTTP layer of the SDD dashboard server. It contains the routing, the
+ * token/origin gate and the read-only API. This code came out of server.ts.
+ * Thus you can test all of the surface with a plain fetch handler and a fake
+ * ctx. An MCP/stdio boot is not necessary.
  *
- * The API is READ-ONLY over docs/ (features, artifacts, roadmap) plus exactly
- * two mutating routes, neither of which touches disk: POST /api/command relays
- * a server-built, allowlisted /sdd: line into the live session; POST
- * /api/answer relays the picked option of a pending dashboard_ask question
- * (option label text authored by Claude itself — never browser free text).
+ * The API is READ-ONLY over docs/ (features, artifacts, roadmap). It also has
+ * exactly two mutating routes. These routes do not touch the disk:
+ * - POST /api/command sends a server-built, allowlisted /sdd: line to the live
+ *   session.
+ * - POST /api/answer sends the selected option of a pending dashboard_ask
+ *   question. Claude itself wrote the option label text. It is never free text
+ *   from the browser.
  */
 
 import { readFileSync, statSync } from 'fs'
@@ -31,9 +34,9 @@ export interface HttpCtx {
   broadcast: (frame: Frame) => void
   /** Push an inbound channel notification to the live session (MCP). */
   notify: (params: { content: string; meta: Record<string, unknown> }) => void
-  /** Random id for command correlation (injected for determinism in tests). */
+  /** A random id to correlate commands. Tests inject it to get deterministic results. */
   requestId: () => string
-  /** Pending dashboard_ask questions (registered by the MCP tool handler). */
+  /** The pending dashboard_ask questions. The MCP tool handler registers them. */
   asks: AskRegistry
 }
 
@@ -50,11 +53,12 @@ export function tokenOk(ctx: HttpCtx, url: URL, req: Request): boolean {
 }
 
 export function loopbackOk(req: Request): boolean {
-  // Host must be loopback (it always is — we bind 127.0.0.1 — but check anyway).
+  // The host must be loopback. We bind 127.0.0.1, thus it is always loopback.
+  // But we examine it all the same.
   const host = (req.headers.get('host') || '').split(':')[0]
   if (host && host !== '127.0.0.1' && host !== 'localhost') return false
-  // Origin, when present, must be our own loopback origin (defence in depth for
-  // mutating routes — a cross-site POST would carry a foreign Origin).
+  // If an Origin is present, it must be our own loopback origin. This is defense
+  // in depth for the mutating routes, because a cross-site POST has a foreign Origin.
   const origin = req.headers.get('origin')
   if (origin) {
     try {
@@ -92,7 +96,7 @@ export function createFetchHandler(ctx: HttpCtx) {
       }
     }
 
-    // --- static dashboard assets (no token — just the app shell) ---
+    // --- static dashboard assets (no token, only the app shell) ---
     if (req.method === 'GET' || req.method === 'HEAD') {
       const rel = path === '/' ? '/index.html' : path
       const file = safeStaticPath(ctx.staticRoot, rel)
@@ -107,7 +111,7 @@ export function createFetchHandler(ctx: HttpCtx) {
 }
 
 async function handleApi(ctx: HttpCtx, req: Request, url: URL, path: string): Promise<Response> {
-  // GET /api/meta — connection sanity (project resolved? session?)
+  // GET /api/meta — a connection check (is the project resolved? is there a session?)
   if (path === '/api/meta' && req.method === 'GET') {
     const cfg = ctx.readConfig()
     return json({
@@ -160,8 +164,8 @@ async function handleApi(ctx: HttpCtx, req: Request, url: URL, path: string): Pr
   }
 
   // POST /api/command  { slug, command, depth? }  → inbound /sdd: line.
-  // The ONLY mutating route — and it mutates nothing on disk; it relays a
-  // server-built allowlisted command into the session.
+  // One of the two mutating routes. It changes nothing on the disk. It sends a
+  // server-built, allowlisted command to the session.
   if (path === '/api/command' && req.method === 'POST') {
     if (!loopbackOk(req)) return json({ error: 'forbidden origin' }, 403)
     requireProjectDir()
@@ -191,10 +195,11 @@ async function handleApi(ctx: HttpCtx, req: Request, url: URL, path: string): Pr
     return json({ ok: true, queued: true, request_id: requestId, command: built.content }, 202)
   }
 
-  // POST /api/answer  { ask_id, option }  → the user's pick for a dashboard_ask
-  // question. Touches no disk. The relayed content quotes the option LABEL that
-  // Claude itself authored in dashboard_ask — the browser contributes only the
-  // index, so this route cannot smuggle free text into the session.
+  // POST /api/answer  { ask_id, option }  → the option that the user selected for
+  // a dashboard_ask question. This route does not touch the disk. The content that
+  // it sends quotes the option LABEL that Claude itself wrote in dashboard_ask.
+  // The browser gives only the index. Thus this route cannot put free text into
+  // the session.
   if (path === '/api/answer' && req.method === 'POST') {
     if (!loopbackOk(req)) return json({ error: 'forbidden origin' }, 403)
     const body = (await req.json()) as { ask_id?: string; option?: number }
@@ -202,7 +207,7 @@ async function handleApi(ctx: HttpCtx, req: Request, url: URL, path: string): Pr
     if (!ask) return json({ error: 'no such pending question (already answered or expired)' }, 404)
     const idx = Number(body.option)
     if (!Number.isInteger(idx) || idx < 0 || idx >= ask.options.length) {
-      ctx.asks.register(ask) // still unanswered — put it back
+      ctx.asks.register(ask) // the question has no answer yet, so put it back
       return json({ error: 'invalid option index' }, 400)
     }
     const picked = ask.options[idx]

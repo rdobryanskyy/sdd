@@ -6,31 +6,31 @@ updated_at: "<today YYYY-MM-DD>"
 # Domain Context — <slug or repo>
 
 <!--
-CONTEXT.md is the domain glossary — not a spec and not a scratch pad. NO implementation
-detail here (no datastore/broker/framework names, no API contracts) — only domain words
-and the boundaries between them. Implementation choices live in the SAD and ADRs; behaviour
-lives in spec.md.
+CONTEXT.md is the domain glossary. It is not a spec and not a scratch pad. Do NOT write
+implementation detail here (no datastore/broker/framework names, no API contracts). Write only
+domain words and the boundaries between them. Implementation choices are in the SAD and ADRs.
+Behavior is in spec.md.
 
-Terms get fixed inline, the moment they surface in an interview / spec / review — never
-batched «I'll consolidate later». Empty H2 → prune before commit; keep only the sections
-that carry real content. ## Glossary is mandatory; the other two are optional.
+Fix each term inline, when it first occurs in an interview / spec / review. Never collect terms
+in a batch «I'll consolidate later». If an H2 is empty, remove it before the commit. Keep only
+the sections that have real content. ## Glossary is mandatory. The other two are optional.
 -->
 
 ## Glossary
 
-<!-- One line per term: name · one-sentence canonical definition · one-sentence boundary
-     (what it is NOT / the concept it gets confused with). Alphabetical once there are a few. -->
-- <term> — <one-sentence definition>. NOT <concept it's confused with + how it differs>.
+<!-- Write one line for each term: name · one-sentence canonical definition · one-sentence boundary
+     (what it is NOT / the concept that people confuse with it). When there are some terms, sort them alphabetically. -->
+- <term> — <one-sentence definition>. NOT <concept that people confuse it with + how it differs>.
 
 ## Invariants
 
-<!-- Domain rules that hold across the whole feature/codebase — phrased «X always must / can
-     never». These are rules ABOVE any single acceptance criterion, not spec AC. Prune the
-     section if there are none. -->
+<!-- Domain rules that are true across the full feature/codebase. Write them as «X always must / can
+     never». These rules are ABOVE each single acceptance criterion. They are not spec AC. If there
+     are no rules, remove the section. -->
 - <invariant in the form «X always must / can never …»>
 
 ## Out of scope
 
-<!-- Concepts the author explicitly placed outside this domain, with a one-line reason — so
-     nobody re-litigates them in six months. Prune the section if there are none. -->
-- <out-of-scope concept · reason it's excluded>
+<!-- Concepts that the author explicitly put outside this domain, each with a one-line reason.
+     Then nobody argues about them again in six months. If there are none, remove the section. -->
+- <out-of-scope concept · reason that it is excluded>
